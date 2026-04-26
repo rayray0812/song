@@ -48,6 +48,7 @@ const editFormHost = document.querySelector("#editFormHost");
 const roleFields = document.querySelector("#roleFields");
 const roleGroupTemplate = document.querySelector("#roleGroupTemplate");
 const personInputTemplate = document.querySelector("#personInputTemplate");
+const creditInputTemplate = document.querySelector("#creditInputTemplate");
 const otherInputTemplate = document.querySelector("#otherInputTemplate");
 const memberSuggestions = document.querySelector("#memberSuggestions");
 const songList = document.querySelector("#songList");
@@ -117,6 +118,58 @@ function createRoleFields() {
     addRoleInput(role);
   });
   renderLucideIcons();
+}
+
+function createCreditFields() {
+  document.querySelectorAll(".credit-group").forEach((group) => {
+    group.querySelector(".credit-inputs").replaceChildren();
+    addCreditInput(group.dataset.credit);
+  });
+}
+
+function addCreditInput(credit, value = "") {
+  const group = document.querySelector(`.credit-group[data-credit="${CSS.escape(credit)}"]`);
+  if (!group) return;
+
+  const node = creditInputTemplate.content.firstElementChild.cloneNode(true);
+  node.querySelector(".credit-person-input").value = value;
+  group.querySelector(".credit-inputs").append(node);
+  updateCreditRemoveButtons(group);
+}
+
+function removeCreditInput(button) {
+  const group = button.closest(".credit-group");
+  const rows = group.querySelectorAll(".credit-row");
+  if (rows.length <= 1) return;
+
+  button.closest(".credit-row").remove();
+  updateCreditRemoveButtons(group);
+}
+
+function updateCreditRemoveButtons(group) {
+  const rows = group.querySelectorAll(".credit-row");
+  rows.forEach((row) => {
+    row.querySelector(".remove-credit-button").disabled = rows.length <= 1;
+  });
+}
+
+function getCreditValue(credit) {
+  const group = document.querySelector(`.credit-group[data-credit="${CSS.escape(credit)}"]`);
+  return uniqueNames([...group.querySelectorAll(".credit-person-input")].map((input) => input.value)).join("、");
+}
+
+function setCreditValue(credit, value = "") {
+  const group = document.querySelector(`.credit-group[data-credit="${CSS.escape(credit)}"]`);
+  group.querySelector(".credit-inputs").replaceChildren();
+  const names = splitPeople(value);
+  (names.length ? names : [""]).forEach((name) => addCreditInput(credit, name));
+}
+
+function splitPeople(value = "") {
+  return String(value)
+    .split(/[、,，\n/]+/)
+    .map(normalizeName)
+    .filter(Boolean);
 }
 
 function addRoleInput(role, value = "", customRole = "") {
@@ -219,9 +272,10 @@ function collectSongFromForm() {
   return {
     id: state.editingId ?? crypto.randomUUID(),
     title: document.querySelector("#songTitle").value.trim(),
-    arranger: normalizeName(document.querySelector("#arranger").value),
-    composer: normalizeName(document.querySelector("#composer").value),
-    lyricist: normalizeName(document.querySelector("#lyricist").value),
+    allMembers: normalizeName(document.querySelector("#allMembers").value),
+    arranger: getCreditValue("arranger"),
+    composer: getCreditValue("composer"),
+    lyricist: getCreditValue("lyricist"),
     lyrics: document.querySelector("#lyrics").value.trim(),
     performers,
     createdAt: state.editingId
@@ -233,6 +287,7 @@ function collectSongFromForm() {
 
 function resetForm() {
   form.reset();
+  createCreditFields();
   clearRoleInputs();
   state.editingId = null;
   state.formMode = "add";
@@ -276,6 +331,7 @@ function fromDbSong(song) {
   return {
     id: song.id,
     title: song.title,
+    allMembers: song.all_members ?? song.allMembers ?? "",
     arranger: song.arranger ?? "",
     composer: song.composer ?? "",
     lyricist: song.lyricist ?? "",
@@ -290,6 +346,7 @@ function toDbSong(song) {
   return {
     id: song.id,
     title: song.title,
+    all_members: song.allMembers ?? song.all_members ?? "",
     arranger: song.arranger ?? "",
     composer: song.composer ?? "",
     lyricist: song.lyricist ?? "",
@@ -409,6 +466,7 @@ function renderSongs() {
         .join("");
       const performerCount = uniqueNames(Object.values(song.performers)).length;
       const credits = [
+        ["全體成員", song.allMembers],
         ["編曲", song.arranger],
         ["作曲", song.composer],
         ["作詞", song.lyricist],
@@ -512,9 +570,10 @@ function editSong(songId) {
   submitButton.textContent = "更新報歌";
   resetButton.textContent = "取消";
   document.querySelector("#songTitle").value = song.title;
-  document.querySelector("#arranger").value = song.arranger ?? "";
-  document.querySelector("#composer").value = song.composer ?? "";
-  document.querySelector("#lyricist").value = song.lyricist ?? "";
+  document.querySelector("#allMembers").value = song.allMembers ?? "";
+  setCreditValue("arranger", song.arranger);
+  setCreditValue("composer", song.composer);
+  setCreditValue("lyricist", song.lyricist);
   document.querySelector("#lyrics").value = song.lyrics;
   clearRoleInputs();
 
@@ -629,6 +688,7 @@ function exportSongs() {
   const content = state.songs
     .map((song, index) => {
       const credits = [
+        song.allMembers ? `全體成員: ${song.allMembers}` : "",
         song.arranger ? `編曲: ${song.arranger}` : "",
         song.composer ? `作曲: ${song.composer}` : "",
         song.lyricist ? `作詞: ${song.lyricist}` : "",
@@ -661,10 +721,11 @@ function exportExcel() {
 
   const roleColumns = getRoleColumns();
   const songRows = state.songs.map((song, index) => {
-    const row = {
-      序號: index + 1,
-      歌名: song.title,
-      編曲: song.arranger ?? "",
+      const row = {
+        序號: index + 1,
+        歌名: song.title,
+        全體成員: song.allMembers ?? "",
+        編曲: song.arranger ?? "",
       作曲: song.composer ?? "",
       作詞: song.lyricist ?? "",
       歌詞: song.lyrics ?? "",
@@ -724,6 +785,7 @@ function getDateStamp() {
 }
 
 createRoleFields();
+createCreditFields();
 updateMemberUi();
 render();
 loadCloudData();
@@ -737,6 +799,17 @@ roleFields.addEventListener("click", (event) => {
 
   const removeButton = event.target.closest(".remove-role-button");
   if (removeButton) removeRoleInput(removeButton);
+});
+
+document.querySelector(".credit-grid").addEventListener("click", (event) => {
+  const addButton = event.target.closest(".add-credit-button");
+  if (addButton) {
+    addCreditInput(addButton.dataset.credit);
+    return;
+  }
+
+  const removeButton = event.target.closest(".remove-credit-button");
+  if (removeButton) removeCreditInput(removeButton);
 });
 
 form.addEventListener("submit", (event) => {

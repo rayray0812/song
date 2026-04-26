@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>大成報歌</title>
+  <title>樂研大成報歌</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -33,30 +33,44 @@
             <input id="songTitle" name="title" type="text" placeholder="輸入歌名" required />
           </label>
 
+          <label class="field">
+            <span>全體成員</span>
+            <input id="allMembers" name="allMembers" type="text" list="memberSuggestions" placeholder="輸入全體成員或負責人" />
+          </label>
+
           <div class="credit-grid">
-            <label class="field">
-              <span>編曲</span>
-              <input id="arranger" name="arranger" type="text" list="memberSuggestions" placeholder="輸入姓名" />
-            </label>
-            <label class="field">
-              <span>作曲</span>
-              <input id="composer" name="composer" type="text" list="memberSuggestions" placeholder="輸入姓名" />
-            </label>
-            <label class="field">
-              <span>作詞</span>
-              <input id="lyricist" name="lyricist" type="text" list="memberSuggestions" placeholder="輸入姓名" />
-            </label>
+            <section class="credit-group" data-credit="arranger">
+              <div class="credit-heading">
+                <h3>編曲</h3>
+                <button class="add-credit-button" type="button" data-credit="arranger" aria-label="新增編曲">+</button>
+              </div>
+              <div class="credit-inputs"></div>
+            </section>
+            <section class="credit-group" data-credit="composer">
+              <div class="credit-heading">
+                <h3>作曲</h3>
+                <button class="add-credit-button" type="button" data-credit="composer" aria-label="新增作曲">+</button>
+              </div>
+              <div class="credit-inputs"></div>
+            </section>
+            <section class="credit-group" data-credit="lyricist">
+              <div class="credit-heading">
+                <h3>作詞</h3>
+                <button class="add-credit-button" type="button" data-credit="lyricist" aria-label="新增作詞">+</button>
+              </div>
+              <div class="credit-inputs"></div>
+            </section>
           </div>
 
           <label class="field">
             <span>歌詞</span>
-            <textarea id="lyrics" name="lyrics" rows="5" placeholder="貼上歌詞，列表中會預設收合"></textarea>
+            <textarea id="lyrics" name="lyrics" rows="5" placeholder="輸入歌詞，純音樂不用填"></textarea>
           </label>
 
           <div class="role-grid" id="roleFields"></div>
 
           <div class="form-actions">
-            <button class="primary-button" id="submitButton" type="submit">加入報歌</button>
+            <button class="primary-button" id="submitButton" type="submit">報歌</button>
             <button class="ghost-button" id="resetButton" type="reset">清空</button>
           </div>
         </form>
@@ -132,6 +146,16 @@
         <input class="person-input" type="text" list="memberSuggestions" placeholder="輸入姓名" />
       </label>
       <button class="remove-role-button" type="button" aria-label="移除欄位">-</button>
+    </div>
+  </template>
+
+  <template id="creditInputTemplate">
+    <div class="input-row credit-row">
+      <label class="field role-field">
+        <span>人員</span>
+        <input class="credit-person-input" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+      </label>
+      <button class="remove-credit-button" type="button" aria-label="移除欄位">-</button>
     </div>
   </template>
 
