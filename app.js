@@ -95,11 +95,21 @@ function createCloudClient() {
 }
 
 function normalizeName(name) {
-  return name.trim().replace(/\s+/g, " ");
+  return String(name ?? "").trim().replace(/\s+/g, " ");
 }
 
 function uniqueNames(names) {
-  return [...new Set(names.map(normalizeName).filter(Boolean))];
+  return [...new Set((names ?? []).map(normalizeName).filter(Boolean))];
+}
+
+function normalizePerformers(performers) {
+  if (!performers || typeof performers !== "object" || Array.isArray(performers)) return {};
+
+  return Object.fromEntries(
+    Object.entries(performers)
+      .map(([role, name]) => [String(role), normalizeName(name)])
+      .filter(([role, name]) => role && name),
+  );
 }
 
 function createRoleFields() {
@@ -346,7 +356,7 @@ function fromDbSong(song) {
     composer: song.composer ?? "",
     lyricist: song.lyricist ?? "",
     lyrics: song.lyrics ?? "",
-    performers: song.performers ?? {},
+    performers: normalizePerformers(song.performers),
     createdAt: new Date(song.created_at).getTime(),
     updatedAt: new Date(song.updated_at).getTime(),
   };
@@ -360,7 +370,7 @@ function toDbSong(song) {
     composer: song.composer ?? "",
     lyricist: song.lyricist ?? "",
     lyrics: song.lyrics,
-    performers: song.performers,
+    performers: normalizePerformers(song.performers),
     created_at: new Date(song.createdAt).toISOString(),
     updated_at: new Date(song.updatedAt).toISOString(),
   };
@@ -387,13 +397,13 @@ async function syncMembers() {
 }
 
 function getAllPerformers() {
-  return uniqueNames(state.songs.flatMap((song) => Object.values(song.performers)));
+  return uniqueNames(state.songs.flatMap((song) => Object.values(normalizePerformers(song.performers))));
 }
 
 function getStats() {
   const stats = new Map();
   state.songs.forEach((song) => {
-    const names = Object.entries(song.performers)
+    const names = Object.entries(normalizePerformers(song.performers))
       .filter(([role]) => !state.statsInstrument || getBaseRole(role) === state.statsInstrument)
       .map(([, name]) => name);
 
@@ -427,7 +437,7 @@ function updateFilter() {
 function updateStatsInstrumentOptions() {
   const selected = statsInstrument.value;
   const instruments = [
-    ...new Set(state.songs.flatMap((song) => Object.keys(song.performers ?? {}).map(getBaseRole))),
+    ...new Set(state.songs.flatMap((song) => Object.keys(normalizePerformers(song.performers)).map(getBaseRole))),
   ].sort((a, b) => instrumentGroups.indexOf(a) - instrumentGroups.indexOf(b));
 
   statsInstrument.replaceChildren(
@@ -447,7 +457,8 @@ function renderSongs() {
   const selectedPerson = personFilter.value;
   const keyword = songSearch.value.trim().toLocaleLowerCase();
   const visibleSongs = state.songs.filter((song) => {
-    const matchesPerson = selectedPerson ? Object.values(song.performers).includes(selectedPerson) : true;
+    const performers = normalizePerformers(song.performers);
+    const matchesPerson = selectedPerson ? Object.values(performers).includes(selectedPerson) : true;
     const searchableText = `${song.title} ${song.lyrics ?? ""}`.toLocaleLowerCase();
     const matchesKeyword = keyword ? searchableText.includes(keyword) : true;
     return matchesPerson && matchesKeyword;
@@ -465,7 +476,8 @@ function renderSongs() {
       const item = document.createElement("article");
       item.className = "song-item";
 
-      const performers = Object.entries(song.performers)
+      const normalizedPerformers = normalizePerformers(song.performers);
+      const performers = Object.entries(normalizedPerformers)
         .map(
           ([role, name]) => {
             const isHighlighted = selectedPerson && name === selectedPerson;
@@ -473,7 +485,7 @@ function renderSongs() {
           },
         )
         .join("");
-      const performerCount = uniqueNames(Object.values(song.performers)).length;
+      const performerCount = uniqueNames(Object.values(normalizedPerformers)).length;
       const credits = [
         ["編曲", song.arranger],
         ["作曲", song.composer],
@@ -584,7 +596,7 @@ function editSong(songId) {
   document.querySelector("#lyrics").value = song.lyrics;
   clearRoleInputs();
 
-  Object.entries(song.performers).forEach(([roleLabel, name]) => {
+  Object.entries(normalizePerformers(song.performers)).forEach(([roleLabel, name]) => {
     const groupRole = getBaseRole(roleLabel);
 
     if (groupRole === "其他") {
@@ -701,7 +713,7 @@ function exportSongs() {
       ]
         .filter(Boolean)
         .join("\n");
-      const performers = Object.entries(song.performers)
+      const performers = Object.entries(normalizePerformers(song.performers))
         .map(([role, name]) => `${role}: ${name}`)
         .join("\n");
       return `${index + 1}. ${song.title}${credits ? `\n${credits}` : ""}\n${performers}${song.lyrics ? `\n\n歌詞:\n${song.lyrics}` : ""}`;
@@ -736,8 +748,9 @@ function exportExcel() {
       歌詞: song.lyrics ?? "",
     };
 
+    const performers = normalizePerformers(song.performers);
     roleColumns.forEach((role) => {
-      row[role] = song.performers?.[role] ?? "";
+      row[role] = performers[role] ?? "";
     });
 
     return row;
@@ -773,7 +786,7 @@ function getRoleColumns() {
   const columns = [];
   const baseRoles = ["主唱1", "主唱2", "電吉他1", "電吉他2", "KB1", "KB2", "木吉他1", "木吉他2", "Bass", "鼓", "木箱鼓"];
 
-  [...baseRoles, ...state.songs.flatMap((song) => Object.keys(song.performers ?? {}))].forEach((role) => {
+  [...baseRoles, ...state.songs.flatMap((song) => Object.keys(normalizePerformers(song.performers)))].forEach((role) => {
     if (!columns.includes(role)) columns.push(role);
   });
 
