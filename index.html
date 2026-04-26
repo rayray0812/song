@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>大成報歌</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">這樣還可以打錯名字的話就刷掉</p>
+        <h1>大成報歌</h1>
+      </div>
+      <div class="header-actions">
+        <button class="ghost-button" id="exportButton" type="button">匯出</button>
+        <button class="ghost-button" id="excelExportButton" type="button">Excel</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="section-title">
+      </div>
+
+      <div id="formHost">
+      <form id="songForm" autocomplete="off">
+        <label class="field">
+          <span>歌名</span>
+          <input id="songTitle" name="title" type="text" placeholder="輸入歌名" required />
+        </label>
+
+        <div class="credit-grid">
+          <label class="field">
+            <span>編曲</span>
+            <input id="arranger" name="arranger" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+          </label>
+          <label class="field">
+            <span>作曲</span>
+            <input id="composer" name="composer" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+          </label>
+          <label class="field">
+            <span>作詞</span>
+            <input id="lyricist" name="lyricist" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span>歌詞</span>
+          <textarea id="lyrics" name="lyrics" rows="5" placeholder="貼上歌詞，列表中會預設收合"></textarea>
+        </label>
+
+        <div class="role-grid" id="roleFields"></div>
+
+        <div class="form-actions">
+          <button class="primary-button" id="submitButton" type="submit">加入報歌</button>
+          <button class="ghost-button" id="resetButton" type="reset">清空</button>
+        </div>
+      </form>
+      </div>
+    </section>
+
+    <section class="panel compact-panel">
+      <div class="section-title">
+        <h2>名單設定</h2>
+        <p>一行一個名字，輸入人員時會依這份名單推薦。</p>
+      </div>
+      <textarea id="memberList" rows="4" placeholder="例如：&#10;陳小明&#10;陳怡君&#10;林家豪"></textarea>
+      <div class="form-actions">
+        <button class="ghost-button" id="saveMembersButton" type="button">儲存名單</button>
+        <span class="save-note" id="memberCount">0 人</span>
+      </div>
+    </section>
+
+    <section class="panel results-panel">
+      <div class="tabs" role="tablist" aria-label="報歌資料">
+        <button class="tab-button is-active" type="button" role="tab" aria-selected="true"
+          data-tab="songs">目前報歌</button>
+        <button class="tab-button" type="button" role="tab" aria-selected="false" data-tab="stats">人員統計</button>
+      </div>
+
+      <div class="tab-view is-active" id="songsView" data-view="songs">
+        <div class="section-title">
+          <h2>目前報歌</h2>
+          <p class="count-badge" id="songCount">0 首歌</p>
+        </div>
+
+          <label class="field">
+            <span>搜尋歌名或歌詞</span>
+            <input id="songSearch" type="search" placeholder="輸入歌名或歌詞關鍵字" />
+          </label>
+
+          <label class="field">
+            <span>依人員篩選</span>
+            <select id="personFilter">
+              <option value="">全部顯示</option>
+          </select>
+        </label>
+
+        <div class="song-list" id="songList"></div>
+      </div>
+
+      <div class="tab-view" id="statsView" data-view="stats">
+        <div class="section-title">
+          <h2>人員統計</h2>
+          <div class="stats-controls">
+            <label class="sort-field">
+              <span>樂器</span>
+              <select id="statsInstrument">
+                <option value="">全部</option>
+              </select>
+            </label>
+            <label class="sort-field">
+              <span>排序</span>
+              <select id="statsSort">
+                <option value="desc">由多到少</option>
+                <option value="asc">由少到多</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="stats-chart" id="statsList"></div>
+      </div>
+    </section>
+  </main>
+
+  <template id="roleGroupTemplate">
+    <section class="role-group">
+      <div class="role-group-heading">
+        <h3></h3>
+        <button class="add-role-button" type="button" aria-label="新增欄位">+</button>
+      </div>
+      <div class="role-inputs"></div>
+    </section>
+  </template>
+
+  <template id="personInputTemplate">
+    <div class="input-row">
+      <label class="field role-field">
+        <span></span>
+        <input class="person-input" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+      </label>
+      <button class="remove-role-button" type="button" aria-label="移除欄位">-</button>
+    </div>
+  </template>
+
+  <template id="otherInputTemplate">
+    <div class="other-row">
+      <label class="field role-field">
+        <span>樂器</span>
+        <input class="other-role-input" type="text" placeholder="例如：小提琴、和聲" />
+      </label>
+      <label class="field role-field">
+        <span>人員</span>
+        <input class="person-input" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+      </label>
+      <button class="remove-role-button" type="button" aria-label="移除欄位">-</button>
+    </div>
+  </template>
+
+  <dialog class="lyrics-dialog" id="lyricsDialog">
+    <div class="dialog-heading">
+      <h2 id="lyricsDialogTitle">歌詞</h2>
+      <button class="ghost-button dialog-close" id="lyricsDialogClose" type="button" aria-label="關閉">關閉</button>
+    </div>
+    <div class="lyrics dialog-lyrics" id="lyricsDialogContent"></div>
+  </dialog>
+
+  <dialog class="edit-dialog" id="editDialog">
+    <div class="dialog-heading">
+      <h2>編輯報歌</h2>
+      <button class="ghost-button dialog-close" id="editDialogClose" type="button" aria-label="關閉">關閉</button>
+    </div>
+    <div class="edit-dialog-body" id="editFormHost"></div>
+  </dialog>
+
+  <dialog class="confirm-dialog" id="deleteDialog">
+    <div class="confirm-dialog-body">
+      <h2>刪除報歌</h2>
+      <p id="deleteDialogText">確定要刪除這首歌嗎？</p>
+      <div class="form-actions confirm-actions">
+        <button class="delete-button" id="confirmDeleteButton" type="button">確認刪除</button>
+        <button class="ghost-button" id="cancelDeleteButton" type="button">取消</button>
+      </div>
+    </div>
+  </dialog>
+
+  <datalist id="memberSuggestions"></datalist>
+
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>
