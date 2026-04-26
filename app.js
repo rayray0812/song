@@ -931,9 +931,14 @@ memberSearch.addEventListener("input", renderMemberOptions);
 memberOptions.addEventListener("click", (event) => {
   const button = event.target.closest(".member-option");
   if (!button || !activeMemberInput) return;
+  const targetInput = activeMemberInput;
   activeMemberInput.value = button.dataset.member;
   closeMemberPicker();
-  activeMemberInput.focus();
+  if (window.matchMedia("(pointer: coarse)").matches) {
+    document.activeElement?.blur();
+  } else {
+    targetInput.focus();
+  }
 });
 
 memberDialogClose.addEventListener("click", closeMemberPicker);
