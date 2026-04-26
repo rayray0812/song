@@ -911,6 +911,13 @@ document.querySelector(".credit-grid").addEventListener("click", (event) => {
   if (removeButton) removeCreditInput(removeButton);
 });
 
+form.addEventListener("pointerdown", (event) => {
+  const input = event.target.closest(".member-picker-input");
+  if (!input || event.pointerType !== "touch") return;
+  event.preventDefault(); // Prevent focus/keyboard before dialog opens on mobile
+  openMemberPicker(input);
+});
+
 form.addEventListener("click", (event) => {
   const input = event.target.closest(".member-picker-input");
   if (!input) return;
