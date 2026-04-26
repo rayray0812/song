@@ -1,7 +1,6 @@
 create table if not exists public.songs (
   id uuid primary key,
   title text not null,
-  all_members text default '' not null,
   arranger text default '' not null,
   composer text default '' not null,
   lyricist text default '' not null,
@@ -14,7 +13,6 @@ create table if not exists public.songs (
 );
 
 alter table public.songs add column if not exists arranger text default '' not null;
-alter table public.songs add column if not exists all_members text default '' not null;
 alter table public.songs add column if not exists composer text default '' not null;
 alter table public.songs add column if not exists lyricist text default '' not null;
 alter table public.songs add column if not exists is_eliminated boolean default false not null;

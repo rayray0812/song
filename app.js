@@ -238,7 +238,7 @@ function updateRemoveButtons(group) {
 
 function updateMemberUi() {
   memberSuggestions.replaceChildren(
-    ...state.members.map((member) => {
+    ...["全體成員", ...state.members.filter((member) => member !== "全體成員")].map((member) => {
       const option = document.createElement("option");
       option.value = member;
       return option;
@@ -272,7 +272,6 @@ function collectSongFromForm() {
   return {
     id: state.editingId ?? crypto.randomUUID(),
     title: document.querySelector("#songTitle").value.trim(),
-    allMembers: normalizeName(document.querySelector("#allMembers").value),
     arranger: getCreditValue("arranger"),
     composer: getCreditValue("composer"),
     lyricist: getCreditValue("lyricist"),
@@ -333,7 +332,6 @@ function fromDbSong(song) {
   return {
     id: song.id,
     title: song.title,
-    allMembers: song.all_members ?? song.allMembers ?? "",
     arranger: song.arranger ?? "",
     composer: song.composer ?? "",
     lyricist: song.lyricist ?? "",
@@ -348,7 +346,6 @@ function toDbSong(song) {
   return {
     id: song.id,
     title: song.title,
-    all_members: song.allMembers ?? song.all_members ?? "",
     arranger: song.arranger ?? "",
     composer: song.composer ?? "",
     lyricist: song.lyricist ?? "",
@@ -468,7 +465,6 @@ function renderSongs() {
         .join("");
       const performerCount = uniqueNames(Object.values(song.performers)).length;
       const credits = [
-        ["全體成員", song.allMembers],
         ["編曲", song.arranger],
         ["作曲", song.composer],
         ["作詞", song.lyricist],
@@ -572,7 +568,6 @@ function editSong(songId) {
   submitButton.textContent = "更新報歌";
   resetButton.textContent = "取消";
   document.querySelector("#songTitle").value = song.title;
-  document.querySelector("#allMembers").value = song.allMembers ?? "";
   setCreditValue("arranger", song.arranger);
   setCreditValue("composer", song.composer);
   setCreditValue("lyricist", song.lyricist);
@@ -690,7 +685,6 @@ function exportSongs() {
   const content = state.songs
     .map((song, index) => {
       const credits = [
-        song.allMembers ? `全體成員: ${song.allMembers}` : "",
         song.arranger ? `編曲: ${song.arranger}` : "",
         song.composer ? `作曲: ${song.composer}` : "",
         song.lyricist ? `作詞: ${song.lyricist}` : "",
@@ -726,7 +720,6 @@ function exportExcel() {
       const row = {
         序號: index + 1,
         歌名: song.title,
-        全體成員: song.allMembers ?? "",
         編曲: song.arranger ?? "",
       作曲: song.composer ?? "",
       作詞: song.lyricist ?? "",
