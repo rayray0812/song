@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>刷歌頁面</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Cull List</p>
+        <h1>刷歌頁面</h1>
+      </div>
+      <div class="header-actions">
+        <a class="ghost-link" href="index.html">回報歌</a>
+      </div>
+    </header>
+
+    <section class="panel" id="gatePanel">
+      <div class="section-title">
+        <h2>輸入通關密語</h2>
+        <p id="gateStatus">通過後才能進入刷歌列表。</p>
+      </div>
+      <form id="gateForm" autocomplete="off">
+        <label class="field">
+          <span>通關密語</span>
+          <input id="passphraseInput" type="password" placeholder="輸入密語" required />
+        </label>
+        <button class="primary-button" type="submit">進入</button>
+      </form>
+    </section>
+
+    <section class="panel cull-panel is-locked" id="cullPanel">
+      <div class="section-title">
+        <div>
+          <h2>目前歌單</h2>
+          <p id="syncStatus">尚未連線</p>
+        </div>
+        <p class="count-badge" id="cullCount">0 / 0 通過</p>
+      </div>
+
+      <div class="cull-list" id="cullList"></div>
+    </section>
+
+    <section class="panel cull-panel is-locked" id="cullStatsPanel">
+      <div class="section-title">
+        <h2>剩餘統計</h2>
+        <p>每人每首歌只計一次。</p>
+      </div>
+      <div class="cull-stats" id="cullStats"></div>
+    </section>
+
+    <section class="panel cull-panel is-locked" id="copyPanel">
+      <div class="section-title">
+        <h2>複製結果</h2>
+        <p>只會複製未被刷掉的歌。</p>
+      </div>
+      <button class="primary-button" id="copyPassedButton" type="button">複製通過歌單</button>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="cull.js"></script>
+</body>
+
+</html>

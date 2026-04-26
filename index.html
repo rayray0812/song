@@ -16,6 +16,7 @@
         <h1>大成報歌</h1>
       </div>
       <div class="header-actions">
+        <a class="ghost-link" href="cull.html">刷歌</a>
         <button class="ghost-button" id="exportButton" type="button">匯出</button>
         <button class="ghost-button" id="excelExportButton" type="button">Excel</button>
       </div>
@@ -26,39 +27,39 @@
       </div>
 
       <div id="formHost">
-      <form id="songForm" autocomplete="off">
-        <label class="field">
-          <span>歌名</span>
-          <input id="songTitle" name="title" type="text" placeholder="輸入歌名" required />
-        </label>
-
-        <div class="credit-grid">
+        <form id="songForm" autocomplete="off">
           <label class="field">
-            <span>編曲</span>
-            <input id="arranger" name="arranger" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+            <span>歌名</span>
+            <input id="songTitle" name="title" type="text" placeholder="輸入歌名" required />
           </label>
+
+          <div class="credit-grid">
+            <label class="field">
+              <span>編曲</span>
+              <input id="arranger" name="arranger" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+            </label>
+            <label class="field">
+              <span>作曲</span>
+              <input id="composer" name="composer" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+            </label>
+            <label class="field">
+              <span>作詞</span>
+              <input id="lyricist" name="lyricist" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+            </label>
+          </div>
+
           <label class="field">
-            <span>作曲</span>
-            <input id="composer" name="composer" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+            <span>歌詞</span>
+            <textarea id="lyrics" name="lyrics" rows="5" placeholder="貼上歌詞，列表中會預設收合"></textarea>
           </label>
-          <label class="field">
-            <span>作詞</span>
-            <input id="lyricist" name="lyricist" type="text" list="memberSuggestions" placeholder="輸入姓名" />
-          </label>
-        </div>
 
-        <label class="field">
-          <span>歌詞</span>
-          <textarea id="lyrics" name="lyrics" rows="5" placeholder="貼上歌詞，列表中會預設收合"></textarea>
-        </label>
+          <div class="role-grid" id="roleFields"></div>
 
-        <div class="role-grid" id="roleFields"></div>
-
-        <div class="form-actions">
-          <button class="primary-button" id="submitButton" type="submit">加入報歌</button>
-          <button class="ghost-button" id="resetButton" type="reset">清空</button>
-        </div>
-      </form>
+          <div class="form-actions">
+            <button class="primary-button" id="submitButton" type="submit">加入報歌</button>
+            <button class="ghost-button" id="resetButton" type="reset">清空</button>
+          </div>
+        </form>
       </div>
     </section>
 
@@ -87,15 +88,15 @@
           <p class="count-badge" id="songCount">0 首歌</p>
         </div>
 
-          <label class="field">
-            <span>搜尋歌名或歌詞</span>
-            <input id="songSearch" type="search" placeholder="輸入歌名或歌詞關鍵字" />
-          </label>
+        <label class="field">
+          <span>搜尋歌名或歌詞</span>
+          <input id="songSearch" type="search" placeholder="輸入歌名或歌詞關鍵字" />
+        </label>
 
-          <label class="field">
-            <span>依人員篩選</span>
-            <select id="personFilter">
-              <option value="">全部顯示</option>
+        <label class="field">
+          <span>依人員篩選</span>
+          <select id="personFilter">
+            <option value="">全部顯示</option>
           </select>
         </label>
 
@@ -178,8 +179,8 @@
 
   <dialog class="confirm-dialog" id="deleteDialog">
     <div class="confirm-dialog-body">
-      <h2>刪除報歌</h2>
-      <p id="deleteDialogText">確定要刪除這首歌嗎？</p>
+      <h2>😡不要亂刪別人的歌</h2>
+      <p id="deleteDialogText">真的要刪嗎？</p>
       <div class="form-actions confirm-actions">
         <button class="delete-button" id="confirmDeleteButton" type="button">確認刪除</button>
         <button class="ghost-button" id="cancelDeleteButton" type="button">取消</button>
