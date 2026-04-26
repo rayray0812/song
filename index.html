@@ -138,7 +138,7 @@
     <div class="input-row">
       <label class="field role-field">
         <span></span>
-        <input class="person-input" type="text" list="performerMemberSuggestions" placeholder="輸入姓名" />
+        <input class="person-input member-picker-input" type="text" data-picker="performer" placeholder="點選或輸入姓名" />
       </label>
       <button class="remove-role-button" type="button" aria-label="移除欄位">-</button>
     </div>
@@ -148,7 +148,7 @@
     <div class="input-row credit-row">
       <label class="field role-field">
         <span>人員</span>
-        <input class="credit-person-input" type="text" list="creditMemberSuggestions" placeholder="輸入姓名" />
+        <input class="credit-person-input member-picker-input" type="text" data-picker="credit" placeholder="點選或輸入姓名" />
       </label>
       <button class="remove-credit-button" type="button" aria-label="移除欄位">-</button>
     </div>
@@ -162,7 +162,7 @@
       </label>
       <label class="field role-field">
         <span>人員</span>
-          <input class="person-input" type="text" list="performerMemberSuggestions" placeholder="輸入姓名" />
+          <input class="person-input member-picker-input" type="text" data-picker="performer" placeholder="點選或輸入姓名" />
       </label>
       <button class="remove-role-button" type="button" aria-label="移除欄位">-</button>
     </div>
@@ -195,8 +195,16 @@
     </div>
   </dialog>
 
-  <datalist id="performerMemberSuggestions"></datalist>
-  <datalist id="creditMemberSuggestions"></datalist>
+  <dialog class="member-dialog" id="memberDialog">
+    <div class="dialog-heading">
+      <h2 id="memberDialogTitle">選擇人員</h2>
+      <button class="ghost-button dialog-close" id="memberDialogClose" type="button" aria-label="關閉">關閉</button>
+    </div>
+    <div class="member-dialog-body">
+      <input id="memberSearch" type="search" placeholder="搜尋姓名" />
+      <div class="member-options" id="memberOptions"></div>
+    </div>
+  </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>

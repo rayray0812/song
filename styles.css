@@ -586,7 +586,8 @@ button:active {
 
 .lyrics-dialog,
 .edit-dialog,
-.confirm-dialog {
+.confirm-dialog,
+.member-dialog {
   width: min(calc(100% - 28px), 680px);
   max-height: min(82vh, 720px);
   border: 1px solid var(--line);
@@ -601,13 +602,15 @@ button:active {
 
 .lyrics-dialog[open],
 .edit-dialog[open],
-.confirm-dialog[open] {
+.confirm-dialog[open],
+.member-dialog[open] {
   animation: dialog-in 180ms var(--ease) both;
 }
 
 .lyrics-dialog::backdrop,
 .edit-dialog::backdrop,
-.confirm-dialog::backdrop {
+.confirm-dialog::backdrop,
+.member-dialog::backdrop {
   background: rgba(17, 24, 39, 0.42);
 }
 
@@ -661,6 +664,41 @@ button:active {
 
 .confirm-actions {
   justify-content: flex-end;
+}
+
+.member-dialog {
+  width: min(calc(100% - 20px), 520px);
+}
+
+.member-dialog-body {
+  display: grid;
+  gap: 12px;
+  max-height: calc(min(82vh, 720px) - 64px);
+  overflow: hidden;
+  padding: 14px;
+}
+
+.member-options {
+  display: grid;
+  gap: 8px;
+  max-height: min(58vh, 430px);
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.member-option {
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  text-align: left;
+}
+
+.member-option.is-special {
+  border-color: #cbd7e6;
+  background: #eef6ff;
+  color: var(--accent);
 }
 
 .cull-list {

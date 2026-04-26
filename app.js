@@ -50,8 +50,6 @@ const roleGroupTemplate = document.querySelector("#roleGroupTemplate");
 const personInputTemplate = document.querySelector("#personInputTemplate");
 const creditInputTemplate = document.querySelector("#creditInputTemplate");
 const otherInputTemplate = document.querySelector("#otherInputTemplate");
-const performerMemberSuggestions = document.querySelector("#performerMemberSuggestions");
-const creditMemberSuggestions = document.querySelector("#creditMemberSuggestions");
 const songList = document.querySelector("#songList");
 const songCount = document.querySelector("#songCount");
 const statsList = document.querySelector("#statsList");
@@ -75,6 +73,14 @@ const deleteDialog = document.querySelector("#deleteDialog");
 const deleteDialogText = document.querySelector("#deleteDialogText");
 const confirmDeleteButton = document.querySelector("#confirmDeleteButton");
 const cancelDeleteButton = document.querySelector("#cancelDeleteButton");
+const memberDialog = document.querySelector("#memberDialog");
+const memberDialogTitle = document.querySelector("#memberDialogTitle");
+const memberDialogClose = document.querySelector("#memberDialogClose");
+const memberSearch = document.querySelector("#memberSearch");
+const memberOptions = document.querySelector("#memberOptions");
+
+let activeMemberInput = null;
+let activePickerType = "performer";
 
 function readJson(key, fallback) {
   try {
@@ -267,20 +273,50 @@ function updateRemoveButtons(group) {
 }
 
 function updateMemberUi() {
+  renderMemberOptions();
+}
+
+function getPickerMembers(type) {
   const performerNames = state.members.filter((member) => member !== "全體成員");
-  const creditNames = ["全體成員", ...performerNames];
-  performerMemberSuggestions.replaceChildren(
-    ...performerNames.map((member) => {
-      const option = document.createElement("option");
-      option.value = member;
-      return option;
-    }),
+  return type === "credit" ? ["全體成員", ...performerNames] : performerNames;
+}
+
+function openMemberPicker(input) {
+  activeMemberInput = input;
+  activePickerType = input.dataset.picker || "performer";
+  memberDialogTitle.textContent = activePickerType === "credit" ? "選擇創作人員" : "選擇樂手";
+  memberSearch.value = input.value;
+  renderMemberOptions();
+  memberDialog.showModal();
+  setTimeout(() => memberSearch.focus(), 0);
+}
+
+function closeMemberPicker() {
+  activeMemberInput = null;
+  memberDialog.close();
+}
+
+function renderMemberOptions() {
+  if (!memberOptions) return;
+
+  const keyword = memberSearch.value.trim().toLocaleLowerCase();
+  const members = getPickerMembers(activePickerType).filter((member) =>
+    keyword ? member.toLocaleLowerCase().includes(keyword) : true,
   );
-  creditMemberSuggestions.replaceChildren(
-    ...creditNames.map((member) => {
-      const option = document.createElement("option");
-      option.value = member;
-      return option;
+
+  if (members.length === 0) {
+    memberOptions.innerHTML = `<div class="empty-state">沒有符合的成員，可直接在欄位手動輸入</div>`;
+    return;
+  }
+
+  memberOptions.replaceChildren(
+    ...members.map((member) => {
+      const button = document.createElement("button");
+      button.className = `member-option${member === "全體成員" ? " is-special" : ""}`;
+      button.type = "button";
+      button.textContent = member;
+      button.dataset.member = member;
+      return button;
     }),
   );
 }
@@ -847,6 +883,33 @@ document.querySelector(".credit-grid").addEventListener("click", (event) => {
 
   const removeButton = event.target.closest(".remove-credit-button");
   if (removeButton) removeCreditInput(removeButton);
+});
+
+form.addEventListener("focusin", (event) => {
+  const input = event.target.closest(".member-picker-input");
+  if (!input) return;
+  openMemberPicker(input);
+});
+
+memberSearch.addEventListener("input", renderMemberOptions);
+
+memberOptions.addEventListener("click", (event) => {
+  const button = event.target.closest(".member-option");
+  if (!button || !activeMemberInput) return;
+  activeMemberInput.value = button.dataset.member;
+  closeMemberPicker();
+  activeMemberInput.focus();
+});
+
+memberDialogClose.addEventListener("click", closeMemberPicker);
+
+memberDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeMemberPicker();
+});
+
+memberDialog.addEventListener("click", (event) => {
+  if (event.target === memberDialog) closeMemberPicker();
 });
 
 form.addEventListener("submit", (event) => {
