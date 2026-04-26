@@ -30,7 +30,7 @@ const storageKeys = {
 const defaultMembers = ["陳小明", "陳怡君", "林家豪", "王品安", "張育瑋"];
 
 const state = {
-  songs: readJson(storageKeys.songs, []),
+  songs: normalizeSongs(readJson(storageKeys.songs, [])),
   members: readJson(storageKeys.members, defaultMembers),
   editingId: null,
   db: null,
@@ -100,6 +100,25 @@ function normalizeName(name) {
 
 function uniqueNames(names) {
   return [...new Set((names ?? []).map(normalizeName).filter(Boolean))];
+}
+
+function normalizeSongs(songs) {
+  if (!Array.isArray(songs)) return [];
+  return songs.filter(Boolean).map(normalizeSong);
+}
+
+function normalizeSong(song) {
+  return {
+    id: song.id || crypto.randomUUID(),
+    title: String(song.title ?? ""),
+    arranger: normalizeName(song.arranger),
+    composer: normalizeName(song.composer),
+    lyricist: normalizeName(song.lyricist),
+    lyrics: String(song.lyrics ?? ""),
+    performers: normalizePerformers(song.performers),
+    createdAt: Number(song.createdAt) || Date.now(),
+    updatedAt: Number(song.updatedAt) || Date.now(),
+  };
 }
 
 function normalizePerformers(performers) {
@@ -339,7 +358,7 @@ async function loadCloudData() {
     return;
   }
 
-  state.songs = songs.map(fromDbSong);
+  state.songs = normalizeSongs(songs.map(fromDbSong));
   state.members = uniqueNames(memberRows?.names?.length ? memberRows.names : state.members);
   state.isCloudReady = true;
   writeJson(storageKeys.songs, state.songs);
@@ -349,7 +368,7 @@ async function loadCloudData() {
 }
 
 function fromDbSong(song) {
-  return {
+  return normalizeSong({
     id: song.id,
     title: song.title,
     arranger: song.arranger ?? "",
@@ -359,7 +378,7 @@ function fromDbSong(song) {
     performers: normalizePerformers(song.performers),
     createdAt: new Date(song.created_at).getTime(),
     updatedAt: new Date(song.updated_at).getTime(),
-  };
+  });
 }
 
 function toDbSong(song) {
