@@ -50,8 +50,6 @@ const roleGroupTemplate = document.querySelector("#roleGroupTemplate");
 const personInputTemplate = document.querySelector("#personInputTemplate");
 const otherInputTemplate = document.querySelector("#otherInputTemplate");
 const memberSuggestions = document.querySelector("#memberSuggestions");
-const memberList = document.querySelector("#memberList");
-const memberCount = document.querySelector("#memberCount");
 const songList = document.querySelector("#songList");
 const songCount = document.querySelector("#songCount");
 const statsList = document.querySelector("#statsList");
@@ -186,8 +184,6 @@ function updateRemoveButtons(group) {
 }
 
 function updateMemberUi() {
-  memberList.value = state.members.join("\n");
-  memberCount.textContent = `${state.members.length} 人`;
   memberSuggestions.replaceChildren(
     ...state.members.map((member) => {
       const option = document.createElement("option");
@@ -756,18 +752,8 @@ form.addEventListener("submit", (event) => {
     state.songs = [song, ...state.songs];
   }
 
-  state.members = uniqueNames([
-    ...state.members,
-    song.arranger,
-    song.composer,
-    song.lyricist,
-    ...Object.values(song.performers),
-  ]);
   saveSongs();
-  saveMembers();
   syncSong(song);
-  syncMembers();
-  updateMemberUi();
   if (wasEditing) {
     closeEditDialog({ shouldReset: false });
     resetForm();
@@ -785,14 +771,6 @@ form.addEventListener("reset", (event) => {
   }
 
   setTimeout(resetForm, 0);
-});
-
-document.querySelector("#saveMembersButton").addEventListener("click", () => {
-  state.members = uniqueNames(memberList.value.split(/\r?\n/));
-  saveMembers();
-  syncMembers();
-  updateMemberUi();
-  render();
 });
 
 personFilter.addEventListener("change", renderSongs);
