@@ -293,7 +293,9 @@ function openMemberPicker(input) {
   memberSearch.value = "";
   renderMemberOptions();
   openDialog(memberDialog);
-  setTimeout(() => memberSearch.focus(), 0);
+  if (!window.matchMedia("(pointer: coarse)").matches) {
+    setTimeout(() => memberSearch.focus(), 0);
+  }
 }
 
 function closeMemberPicker() {
