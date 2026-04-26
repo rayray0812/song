@@ -309,6 +309,14 @@ select:focus {
   margin-bottom: 8px;
 }
 
+.other-row > :nth-child(1) {
+  grid-column: 1 / -1;
+}
+
+.other-row > :nth-child(3) {
+  align-self: end;
+}
+
 .form-actions {
   display: flex;
   align-items: center;
@@ -967,5 +975,9 @@ button:active {
 
   .other-row {
     grid-template-columns: minmax(120px, 0.8fr) minmax(0, 1.2fr) 42px;
+  }
+
+  .other-row > :nth-child(1) {
+    grid-column: auto;
   }
 }
