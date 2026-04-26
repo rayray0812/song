@@ -81,6 +81,10 @@ const memberOptions = document.querySelector("#memberOptions");
 
 let activeMemberInput = null;
 let activePickerType = "performer";
+let pickerTouchInput = null;
+let pickerTouchStartY = 0;
+let pickerTouchScrolled = false;
+let memberDialogScrolled = false;
 
 function escapeSelectorValue(value) {
   if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(value);
@@ -911,17 +915,31 @@ document.querySelector(".credit-grid").addEventListener("click", (event) => {
   if (removeButton) removeCreditInput(removeButton);
 });
 
-form.addEventListener("pointerdown", (event) => {
+form.addEventListener("touchstart", (event) => {
   const input = event.target.closest(".member-picker-input");
-  if (!input || event.pointerType !== "touch") return;
-  event.preventDefault(); // Prevent focus/keyboard before dialog opens on mobile
+  if (!input) return;
+  pickerTouchInput = input;
+  pickerTouchStartY = event.touches[0].clientY;
+  pickerTouchScrolled = false;
+}, { passive: false });
+
+form.addEventListener("touchmove", (event) => {
+  if (!pickerTouchInput) return;
+  if (Math.abs(event.touches[0].clientY - pickerTouchStartY) > 8) pickerTouchScrolled = true;
+}, { passive: true });
+
+form.addEventListener("touchend", (event) => {
+  const input = pickerTouchInput;
+  pickerTouchInput = null;
+  if (!input || pickerTouchScrolled) return;
+  event.preventDefault(); // Prevent focus/keyboard on confirmed tap
   openMemberPicker(input);
-});
+}, { passive: false });
 
 form.addEventListener("click", (event) => {
   const input = event.target.closest(".member-picker-input");
   if (!input) return;
-  openMemberPicker(input);
+  openMemberPicker(input); // Mouse / desktop only
 });
 
 form.addEventListener("keydown", (event) => {
@@ -936,6 +954,7 @@ form.addEventListener("keydown", (event) => {
 memberSearch.addEventListener("input", renderMemberOptions);
 
 memberOptions.addEventListener("click", (event) => {
+  if (memberDialogScrolled) { memberDialogScrolled = false; return; }
   const button = event.target.closest(".member-option");
   if (!button || !activeMemberInput) return;
   const targetInput = activeMemberInput;
@@ -955,7 +974,12 @@ memberDialog.addEventListener("cancel", (event) => {
   closeMemberPicker();
 });
 
+memberDialog.addEventListener("touchmove", () => {
+  memberDialogScrolled = true;
+}, { passive: true });
+
 memberDialog.addEventListener("click", (event) => {
+  if (memberDialogScrolled) { memberDialogScrolled = false; return; }
   if (event.target === memberDialog) closeMemberPicker();
 });
 
