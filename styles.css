@@ -334,6 +334,15 @@ button {
   display: none !important;
 }
 
+.dialog-fallback-open {
+  display: block;
+  position: fixed;
+  inset: 18px auto auto 50%;
+  z-index: 20;
+  max-width: calc(100% - 28px);
+  transform: translateX(-50%);
+}
+
 button:active {
   transform: translateY(1px) scale(0.99);
 }

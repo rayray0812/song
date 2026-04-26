@@ -82,6 +82,11 @@ const memberOptions = document.querySelector("#memberOptions");
 let activeMemberInput = null;
 let activePickerType = "performer";
 
+function escapeSelectorValue(value) {
+  if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(value);
+  return String(value).replace(/["\\]/g, "\\$&");
+}
+
 function readJson(key, fallback) {
   try {
     return JSON.parse(localStorage.getItem(key)) ?? fallback;
@@ -96,7 +101,7 @@ function writeJson(key, value) {
 
 function createCloudClient() {
   const config = window.SUPABASE_CONFIG;
-  if (!config?.url || !config?.anonKey || !window.supabase) return null;
+  if (!config || !config.url || !config.anonKey || !window.supabase) return null;
   return window.supabase.createClient(config.url, config.anonKey);
 }
 
@@ -164,7 +169,7 @@ function createCreditFields() {
 }
 
 function addCreditInput(credit, value = "") {
-  const group = document.querySelector(`.credit-group[data-credit="${CSS.escape(credit)}"]`);
+  const group = document.querySelector(`.credit-group[data-credit="${escapeSelectorValue(credit)}"]`);
   if (!group) return;
 
   const node = creditInputTemplate.content.firstElementChild.cloneNode(true);
@@ -190,12 +195,12 @@ function updateCreditRemoveButtons(group) {
 }
 
 function getCreditValue(credit) {
-  const group = document.querySelector(`.credit-group[data-credit="${CSS.escape(credit)}"]`);
+  const group = document.querySelector(`.credit-group[data-credit="${escapeSelectorValue(credit)}"]`);
   return uniqueNames([...group.querySelectorAll(".credit-person-input")].map((input) => input.value)).join("、");
 }
 
 function setCreditValue(credit, value = "") {
-  const group = document.querySelector(`.credit-group[data-credit="${CSS.escape(credit)}"]`);
+  const group = document.querySelector(`.credit-group[data-credit="${escapeSelectorValue(credit)}"]`);
   group.querySelector(".credit-inputs").replaceChildren();
   const names = splitPeople(value);
   (names.length ? names : [""]).forEach((name) => addCreditInput(credit, name));
@@ -209,7 +214,7 @@ function splitPeople(value = "") {
 }
 
 function addRoleInput(role, value = "", customRole = "") {
-  const group = roleFields.querySelector(`.role-group[data-role="${CSS.escape(role)}"]`);
+  const group = roleFields.querySelector(`.role-group[data-role="${escapeSelectorValue(role)}"]`);
   if (!group) return;
 
   const inputs = group.querySelector(".role-inputs");
@@ -287,13 +292,32 @@ function openMemberPicker(input) {
   memberDialogTitle.textContent = activePickerType === "credit" ? "選擇創作人員" : "選擇樂手";
   memberSearch.value = "";
   renderMemberOptions();
-  memberDialog.showModal();
+  openDialog(memberDialog);
   setTimeout(() => memberSearch.focus(), 0);
 }
 
 function closeMemberPicker() {
   activeMemberInput = null;
-  memberDialog.close();
+  closeDialog(memberDialog);
+}
+
+function openDialog(dialog) {
+  if (typeof dialog.showModal === "function") {
+    dialog.showModal();
+    return;
+  }
+
+  dialog.setAttribute("open", "");
+  dialog.classList.add("dialog-fallback-open");
+}
+
+function closeDialog(dialog) {
+  if (typeof dialog.close === "function") {
+    dialog.close();
+  } else {
+    dialog.removeAttribute("open");
+  }
+  dialog.classList.remove("dialog-fallback-open");
 }
 
 function renderMemberOptions() {
@@ -353,7 +377,7 @@ function collectSongFromForm() {
     lyrics: document.querySelector("#lyrics").value.trim(),
     performers,
     createdAt: state.editingId
-      ? state.songs.find((song) => song.id === state.editingId)?.createdAt
+      ? (state.songs.find((song) => song.id === state.editingId) || {}).createdAt
       : Date.now(),
     updatedAt: Date.now(),
   };
@@ -395,7 +419,7 @@ async function loadCloudData() {
   }
 
   state.songs = normalizeSongs(songs.map(fromDbSong));
-  state.members = uniqueNames(memberRows?.names?.length ? memberRows.names : state.members);
+  state.members = uniqueNames(memberRows && memberRows.names && memberRows.names.length ? memberRows.names : state.members);
   state.isCloudReady = true;
   writeJson(storageKeys.songs, state.songs);
   writeJson(storageKeys.members, state.members);
@@ -665,7 +689,7 @@ function editSong(songId) {
       return;
     }
 
-    const group = roleFields.querySelector(`.role-group[data-role="${CSS.escape(groupRole)}"]`);
+    const group = roleFields.querySelector(`.role-group[data-role="${escapeSelectorValue(groupRole)}"]`);
     const inputs = group.querySelectorAll(".person-input");
     const emptyInput = [...inputs].find((input) => !input.value);
     if (emptyInput) {
@@ -674,12 +698,12 @@ function editSong(songId) {
       addRoleInput(groupRole, name);
     }
   });
-  editDialog.showModal();
+  openDialog(editDialog);
 }
 
 function closeEditDialog({ shouldReset = true } = {}) {
   formHost.append(form);
-  if (editDialog.open) editDialog.close();
+  if (editDialog.open) closeDialog(editDialog);
   if (shouldReset) resetForm();
 }
 
@@ -713,10 +737,10 @@ function renderLucideIcons() {
 
 function deleteSong(songId) {
   const song = state.songs.find((item) => item.id === songId);
-  const songName = song?.title ? `「${song.title}」` : "這首歌";
+  const songName = song && song.title ? `「${song.title}」` : "這首歌";
   state.pendingDeleteId = songId;
   deleteDialogText.textContent = `確定要刪除${songName}嗎？刪除後無法復原。`;
-  deleteDialog.showModal();
+  openDialog(deleteDialog);
 }
 
 function confirmDeleteSong() {
@@ -725,7 +749,7 @@ function confirmDeleteSong() {
 
   state.songs = state.songs.filter((song) => song.id !== songId);
   state.pendingDeleteId = null;
-  deleteDialog.close();
+  closeDialog(deleteDialog);
   saveSongs();
   syncSongDelete(songId);
   render();
@@ -733,7 +757,7 @@ function confirmDeleteSong() {
 
 function cancelDeleteSong() {
   state.pendingDeleteId = null;
-  deleteDialog.close();
+  closeDialog(deleteDialog);
 }
 
 function openLyrics(songId) {
@@ -742,7 +766,7 @@ function openLyrics(songId) {
 
   lyricsDialogTitle.textContent = song.title;
   lyricsDialogContent.textContent = song.lyrics || "沒有填寫歌詞";
-  lyricsDialog.showModal();
+  openDialog(lyricsDialog);
 }
 
 function escapeHtml(value) {
@@ -987,11 +1011,11 @@ songList.addEventListener("click", (event) => {
 });
 
 lyricsDialogClose.addEventListener("click", () => {
-  lyricsDialog.close();
+  closeDialog(lyricsDialog);
 });
 
 lyricsDialog.addEventListener("click", (event) => {
-  if (event.target === lyricsDialog) lyricsDialog.close();
+  if (event.target === lyricsDialog) closeDialog(lyricsDialog);
 });
 
 editDialogClose.addEventListener("click", () => {
