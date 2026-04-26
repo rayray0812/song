@@ -285,7 +285,7 @@ function openMemberPicker(input) {
   activeMemberInput = input;
   activePickerType = input.dataset.picker || "performer";
   memberDialogTitle.textContent = activePickerType === "credit" ? "選擇創作人員" : "選擇樂手";
-  memberSearch.value = input.value;
+  memberSearch.value = "";
   renderMemberOptions();
   memberDialog.showModal();
   setTimeout(() => memberSearch.focus(), 0);
@@ -885,10 +885,20 @@ document.querySelector(".credit-grid").addEventListener("click", (event) => {
   if (removeButton) removeCreditInput(removeButton);
 });
 
-form.addEventListener("focusin", (event) => {
+form.addEventListener("pointerdown", (event) => {
   const input = event.target.closest(".member-picker-input");
   if (!input) return;
+  event.preventDefault();
   openMemberPicker(input);
+});
+
+form.addEventListener("keydown", (event) => {
+  const input = event.target.closest(".member-picker-input");
+  if (!input) return;
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    openMemberPicker(input);
+  }
 });
 
 memberSearch.addEventListener("input", renderMemberOptions);
