@@ -286,7 +286,9 @@ function collectSongFromForm() {
 }
 
 function resetForm() {
-  form.reset();
+  form.querySelectorAll("input, textarea").forEach((field) => {
+    field.value = "";
+  });
   createCreditFields();
   clearRoleInputs();
   state.editingId = null;
@@ -837,13 +839,14 @@ form.addEventListener("submit", (event) => {
 });
 
 form.addEventListener("reset", (event) => {
+  event.preventDefault();
+
   if (state.formMode === "edit") {
-    event.preventDefault();
     closeEditDialog();
     return;
   }
 
-  setTimeout(resetForm, 0);
+  resetForm();
 });
 
 personFilter.addEventListener("change", renderSongs);
