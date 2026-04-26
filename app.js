@@ -50,7 +50,8 @@ const roleGroupTemplate = document.querySelector("#roleGroupTemplate");
 const personInputTemplate = document.querySelector("#personInputTemplate");
 const creditInputTemplate = document.querySelector("#creditInputTemplate");
 const otherInputTemplate = document.querySelector("#otherInputTemplate");
-const memberSuggestions = document.querySelector("#memberSuggestions");
+const performerMemberSuggestions = document.querySelector("#performerMemberSuggestions");
+const creditMemberSuggestions = document.querySelector("#creditMemberSuggestions");
 const songList = document.querySelector("#songList");
 const songCount = document.querySelector("#songCount");
 const statsList = document.querySelector("#statsList");
@@ -237,8 +238,17 @@ function updateRemoveButtons(group) {
 }
 
 function updateMemberUi() {
-  memberSuggestions.replaceChildren(
-    ...["全體成員", ...state.members.filter((member) => member !== "全體成員")].map((member) => {
+  const performerNames = state.members.filter((member) => member !== "全體成員");
+  const creditNames = ["全體成員", ...performerNames];
+  performerMemberSuggestions.replaceChildren(
+    ...performerNames.map((member) => {
+      const option = document.createElement("option");
+      option.value = member;
+      return option;
+    }),
+  );
+  creditMemberSuggestions.replaceChildren(
+    ...creditNames.map((member) => {
       const option = document.createElement("option");
       option.value = member;
       return option;

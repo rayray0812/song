@@ -138,7 +138,7 @@
     <div class="input-row">
       <label class="field role-field">
         <span></span>
-        <input class="person-input" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+        <input class="person-input" type="text" list="performerMemberSuggestions" placeholder="輸入姓名" />
       </label>
       <button class="remove-role-button" type="button" aria-label="移除欄位">-</button>
     </div>
@@ -148,7 +148,7 @@
     <div class="input-row credit-row">
       <label class="field role-field">
         <span>人員</span>
-        <input class="credit-person-input" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+        <input class="credit-person-input" type="text" list="creditMemberSuggestions" placeholder="輸入姓名" />
       </label>
       <button class="remove-credit-button" type="button" aria-label="移除欄位">-</button>
     </div>
@@ -162,7 +162,7 @@
       </label>
       <label class="field role-field">
         <span>人員</span>
-        <input class="person-input" type="text" list="memberSuggestions" placeholder="輸入姓名" />
+          <input class="person-input" type="text" list="performerMemberSuggestions" placeholder="輸入姓名" />
       </label>
       <button class="remove-role-button" type="button" aria-label="移除欄位">-</button>
     </div>
@@ -195,7 +195,8 @@
     </div>
   </dialog>
 
-  <datalist id="memberSuggestions"></datalist>
+  <datalist id="performerMemberSuggestions"></datalist>
+  <datalist id="creditMemberSuggestions"></datalist>
 
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
