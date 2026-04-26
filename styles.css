@@ -100,7 +100,6 @@ h2 {
   box-shadow: var(--shadow);
   margin-top: 14px;
   padding: 14px;
-  animation: rise-in 260ms var(--ease) both;
 }
 
 .compact-panel {
@@ -402,7 +401,6 @@ button:active {
 
 .tab-view.is-active {
   display: block;
-  animation: fade-slide-in 180ms var(--ease) both;
 }
 
 .sort-field {
@@ -440,7 +438,6 @@ button:active {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
-  animation: fade-slide-in 220ms var(--ease) both;
   transition:
     border-color 160ms var(--ease),
     box-shadow 160ms var(--ease),
@@ -613,7 +610,6 @@ button:active {
 .edit-dialog[open],
 .confirm-dialog[open],
 .member-dialog[open] {
-  animation: dialog-in 180ms var(--ease) both;
 }
 
 .lyrics-dialog::backdrop,
@@ -826,7 +822,6 @@ button:active {
   background: transparent;
   color: var(--text);
   padding: 8px;
-  animation: fade-slide-in 220ms var(--ease) both;
 }
 
 .stat-bar-value {
@@ -852,7 +847,6 @@ button:active {
   border-radius: inherit;
   background: linear-gradient(90deg, #235f9c, #4c8f69);
   transform-origin: left;
-  animation: grow-right 420ms var(--ease) both;
 }
 
 .stat-bar-name {
