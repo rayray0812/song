@@ -3,9 +3,8 @@ const state = {
   db: null,
   isUnlocked: false,
   channel: null,
+  passphrase: "",
 };
-
-const devPassphrase = "dcband";
 
 const gatePanel = document.querySelector("#gatePanel");
 const gateForm = document.querySelector("#gateForm");
@@ -24,70 +23,34 @@ function createCloudClient() {
   return window.supabase.createClient(config.url, config.anonKey);
 }
 
-async function sha256(value) {
-  const data = new TextEncoder().encode(value);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
 async function unlock(passphrase) {
   state.db = createCloudClient();
   if (!state.db) {
-    if (passphrase === devPassphrase) {
-      unlockWithoutCloud();
-      return;
-    }
-
-    gateStatus.textContent = "尚未設定 Supabase。測試用密語請輸入 dcband。";
+    gateStatus.textContent = "尚未設定 Supabase，無法使用刷歌功能。";
     return;
   }
 
   gateStatus.textContent = "檢查密語中...";
-  const { data, error } = await state.db
-    .from("app_settings")
-    .select("value")
-    .eq("key", "cull_passphrase_hash")
-    .maybeSingle();
+  const { data: isValid, error } = await state.db.rpc("verify_cull_passphrase", {
+    input_passphrase: passphrase,
+  });
 
-  if (error || !data?.value || data.value === "CHANGE_ME_SHA256") {
-    if (passphrase === devPassphrase) {
-      gateStatus.textContent = "資料庫密語尚未設定，目前使用測試模式。";
-      unlockWithoutCloud();
-      return;
-    }
-
-    gateStatus.textContent = "資料庫尚未設定通關密語。測試用密語請輸入 dcband。";
+  if (error) {
+    gateStatus.textContent = "驗證失敗，請檢查資料庫設定。";
     return;
   }
 
-  const inputHash = await sha256(passphrase);
-  if (inputHash !== data.value) {
+  if (!isValid) {
     gateStatus.textContent = "密語不正確。";
     return;
   }
 
   state.isUnlocked = true;
+  state.passphrase = passphrase;
   gatePanel.hidden = true;
   cullPanels.forEach((panel) => panel.classList.remove("is-locked"));
   await loadSongs();
   subscribeToSongs();
-}
-
-function unlockWithoutCloud() {
-  state.isUnlocked = true;
-  gatePanel.hidden = true;
-  cullPanels.forEach((panel) => panel.classList.remove("is-locked"));
-  syncStatus.textContent = "測試模式：尚未連接資料庫";
-  state.songs = readLocalSongs();
-  render();
-}
-
-function readLocalSongs() {
-  try {
-    return JSON.parse(localStorage.getItem("club-song-list:songs")) ?? [];
-  } catch {
-    return [];
-  }
 }
 
 async function loadSongs() {
@@ -205,21 +168,15 @@ async function toggleSong(songId, isEliminated) {
   );
   render();
 
-  if (!state.db) {
-    localStorage.setItem("club-song-list:songs", JSON.stringify(state.songs));
-    return;
-  }
+  if (!state.db) return;
 
-  const { error } = await state.db
-    .from("songs")
-    .update({
-      is_eliminated: isEliminated,
-      eliminated_at: isEliminated ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", songId);
+  const { data: ok, error } = await state.db.rpc("set_song_eliminated", {
+    input_passphrase: state.passphrase,
+    song_id: songId,
+    eliminated: isEliminated,
+  });
 
-  if (error) {
+  if (error || !ok) {
     state.songs = previousSongs;
     render();
     syncStatus.textContent = "更新失敗，請稍後再試。";
