@@ -10,6 +10,43 @@
 
 <body>
   <main class="app">
+    <section class="countdown-banner" aria-label="評選倒數">
+      <div class="countdown-bg" aria-hidden="true">
+        <span class="countdown-sparkle">♪</span>
+        <span class="countdown-sparkle">♫</span>
+        <span class="countdown-sparkle">♬</span>
+        <span class="countdown-sparkle">♩</span>
+        <span class="countdown-sparkle">♪</span>
+        <span class="countdown-sparkle">♫</span>
+      </div>
+      <article class="countdown-card is-primary" data-target="2026-06-13T00:00:00+08:00">
+        <div class="countdown-card-head">
+          <span class="countdown-tag">大成</span>
+          <span class="countdown-date">6 / 13</span>
+        </div>
+        <div class="countdown-days" aria-live="polite">
+          <span class="cd-prefix">還剩</span>
+          <span class="cd-num" data-unit="days">--</span>
+          <span class="cd-suffix">天</span>
+        </div>
+        <div class="countdown-detail">
+          <span class="cd-mini"><span class="cd-mini-num" data-unit="hours">--</span><span class="cd-mini-label">時</span></span>
+          <span class="cd-mini"><span class="cd-mini-num" data-unit="seconds">--</span><span class="cd-mini-label">秒</span></span>
+        </div>
+        <div class="countdown-progress" aria-hidden="true"><span class="countdown-progress-fill"></span></div>
+      </article>
+      <article class="countdown-card is-mini" data-eval="1" data-target="2026-05-17T00:00:00+08:00" aria-live="polite">
+        <span class="countdown-tag">一評</span>
+        <span class="countdown-date">5 / 17</span>
+        <span class="cd-mini-days"><span class="cd-num" data-unit="days">--</span><span class="cd-suffix">天</span></span>
+      </article>
+      <article class="countdown-card is-mini" data-eval="2" data-target="2026-05-27T00:00:00+08:00" aria-live="polite">
+        <span class="countdown-tag">二評</span>
+        <span class="countdown-date">5 / 27</span>
+        <span class="cd-mini-days"><span class="cd-num" data-unit="days">--</span><span class="cd-suffix">天</span></span>
+      </article>
+    </section>
+
     <header class="topbar">
       <div>
         <p class="eyebrow">Cull List</p>
@@ -65,6 +102,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js" integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil" crossorigin="anonymous"></script>
   <script src="supabase-config.js"></script>
   <script src="cull.js"></script>
+  <script src="countdown.js"></script>
 </body>
 
 </html>
