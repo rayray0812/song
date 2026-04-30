@@ -71,8 +71,11 @@ using (true);
 
 -- Restrict anon to non-elimination columns. is_eliminated and eliminated_at
 -- can only be changed via set_song_eliminated() (passphrase required).
+-- id and created_at must stay grantable so PostgREST's upsert path (which
+-- emits ON CONFLICT DO UPDATE SET col=EXCLUDED.col for every payload column)
+-- doesn't get rejected at parse time.
 revoke update on public.songs from anon;
-grant update (title, arranger, composer, lyricist, lyrics, performers, updated_at)
+grant update (id, title, arranger, composer, lyricist, lyrics, performers, created_at, updated_at)
   on public.songs to anon;
 
 create policy "public read members"

@@ -461,10 +461,26 @@ function toDbSong(song) {
   };
 }
 
-async function syncSong(song) {
+async function syncSong(song, isNew) {
   if (!state.isCloudReady) return;
-  const { error } = await state.db.from("songs").upsert(toDbSong(song));
-  if (error) console.warn("Unable to sync song", error);
+  if (isNew) {
+    const { error } = await state.db.from("songs").insert(toDbSong(song));
+    if (error) console.warn("Unable to insert song", error);
+    return;
+  }
+  const { error } = await state.db
+    .from("songs")
+    .update({
+      title: song.title,
+      arranger: song.arranger ?? "",
+      composer: song.composer ?? "",
+      lyricist: song.lyricist ?? "",
+      lyrics: song.lyrics ?? "",
+      performers: normalizePerformers(song.performers),
+      updated_at: new Date(song.updatedAt).toISOString(),
+    })
+    .eq("id", song.id);
+  if (error) console.warn("Unable to update song", error);
 }
 
 async function syncSongDelete(songId) {
@@ -997,7 +1013,7 @@ form.addEventListener("submit", (event) => {
   }
 
   saveSongs();
-  syncSong(song);
+  syncSong(song, !wasEditing);
   if (wasEditing) {
     closeEditDialog({ shouldReset: false });
     resetForm();
