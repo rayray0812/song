@@ -40,6 +40,7 @@ const state = {
   statsInstrument: "",
   formMode: "add",
   pendingDeleteId: null,
+  submissionsChannel: null,
 };
 
 const form = document.querySelector("#songForm");
@@ -439,6 +440,7 @@ async function refreshSubmissionsState() {
   const { data, error } = await state.db.rpc("get_submissions_open");
   if (error) return;
   applySubmissionsOpen(data !== false);
+  subscribeToSubmissionsState();
 }
 
 function applySubmissionsOpen(isOpen) {
@@ -447,6 +449,18 @@ function applySubmissionsOpen(isOpen) {
   if (!banner || !formPanel) return;
   banner.hidden = isOpen;
   formPanel.hidden = !isOpen;
+}
+
+function subscribeToSubmissionsState() {
+  if (state.submissionsChannel || !state.db) return;
+  state.submissionsChannel = state.db
+    .channel("submissions-state")
+    .on("broadcast", { event: "toggle" }, ({ payload }) => {
+      if (typeof payload?.is_open === "boolean") {
+        applySubmissionsOpen(payload.is_open);
+      }
+    })
+    .subscribe();
 }
 
 function fromDbSong(song) {

@@ -162,6 +162,18 @@ async function toggleReporting() {
   }
   state.reportingOpen = next;
   renderReportingControl();
+  broadcastSubmissionsState(next);
+}
+
+function broadcastSubmissionsState(isOpen) {
+  if (!state.db) return;
+  const channel = state.db.channel("submissions-state");
+  channel.subscribe((status) => {
+    if (status !== "SUBSCRIBED") return;
+    channel
+      .send({ type: "broadcast", event: "toggle", payload: { is_open: isOpen } })
+      .finally(() => state.db.removeChannel(channel));
+  });
 }
 
 async function loadSongs() {
