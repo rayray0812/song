@@ -10,46 +10,8 @@
 
 <body>
   <main class="app">
-    <section class="countdown-banner" aria-label="評選倒數">
-      <div class="countdown-bg" aria-hidden="true">
-        <span class="countdown-sparkle">♪</span>
-        <span class="countdown-sparkle">♫</span>
-        <span class="countdown-sparkle">♬</span>
-        <span class="countdown-sparkle">♩</span>
-        <span class="countdown-sparkle">♪</span>
-        <span class="countdown-sparkle">♫</span>
-      </div>
-      <article class="countdown-card is-mini" data-eval="1" data-target="2026-05-17T00:00:00+08:00" aria-live="polite">
-        <span class="countdown-tag">一評</span>
-        <span class="countdown-date">5 / 17</span>
-        <span class="cd-mini-days"><span class="cd-num" data-unit="days">--</span><span class="cd-suffix">天</span></span>
-      </article>
-      <article class="countdown-card is-mini" data-eval="2" data-target="2026-05-27T00:00:00+08:00" aria-live="polite">
-        <span class="countdown-tag">二評</span>
-        <span class="countdown-date">5 / 27</span>
-        <span class="cd-mini-days"><span class="cd-num" data-unit="days">--</span><span class="cd-suffix">天</span></span>
-      </article>
-      <article class="countdown-card is-primary" data-target="2026-06-13T00:00:00+08:00">
-        <div class="countdown-card-head">
-          <span class="countdown-tag">大成</span>
-          <span class="countdown-date">6 / 13</span>
-        </div>
-        <div class="countdown-days" aria-live="polite">
-          <span class="cd-prefix">還剩</span>
-          <span class="cd-num" data-unit="days">--</span>
-          <span class="cd-suffix">天</span>
-        </div>
-        <div class="countdown-detail">
-          <span class="cd-mini"><span class="cd-mini-num" data-unit="hours">--</span><span class="cd-mini-label">時</span></span>
-          <span class="cd-mini"><span class="cd-mini-num" data-unit="seconds">--</span><span class="cd-mini-label">秒</span></span>
-        </div>
-        <div class="countdown-progress" aria-hidden="true"><span class="countdown-progress-fill"></span></div>
-      </article>
-    </section>
-
     <header class="topbar">
       <div>
-        <p class="eyebrow">Cull List</p>
         <h1>刷歌頁面</h1>
       </div>
       <div class="header-actions">
@@ -71,7 +33,15 @@
       </form>
     </section>
 
-    <section class="panel cull-panel is-locked" id="cullPanel">
+    <nav class="cull-tabs is-locked" id="cullTabs" role="tablist" aria-label="刷歌頁面">
+      <button class="cull-tab-button is-active" type="button" role="tab" data-cull-tab="cull"
+        aria-selected="true">刷歌</button>
+      <button class="cull-tab-button" type="button" role="tab" data-cull-tab="schedule"
+        aria-selected="false">排程</button>
+      <button class="cull-tab-button" type="button" role="tab" data-cull-tab="stats" aria-selected="false">統計</button>
+    </nav>
+
+    <section class="panel cull-panel is-locked" data-cull-section="cull" id="cullPanel">
       <div class="section-title">
         <div>
           <h2>目前歌單</h2>
@@ -83,15 +53,86 @@
       <div class="cull-list" id="cullList"></div>
     </section>
 
-    <section class="panel cull-panel is-locked" id="cullStatsPanel">
+    <section class="panel cull-panel is-locked" data-cull-section="schedule" id="schedulePanel">
+      <div class="section-title">
+        <div>
+          <h2>評鑑排程</h2>
+        </div>
+      </div>
+      <label class="field schedule-start-field">
+        <span>開始時間</span>
+        <input id="scheduleStart" type="time" />
+      </label>
+      <div class="schedule-list" id="scheduleList"></div>
+      <div class="form-actions schedule-actions">
+        <button class="primary-button" id="copyScheduleButton" type="button">複製排程</button>
+        <button class="primary-button live-enter-button" id="enterLiveModeButton" type="button">進入評鑑模式</button>
+      </div>
+    </section>
+
+    <div class="live-mode" id="liveMode" hidden>
+      <header class="live-header">
+        <span class="live-eval-tag" id="liveEvalTag">一評</span>
+        <span class="live-clock" id="liveClock">--:--</span>
+        <button class="ghost-button live-exit-button" id="exitLiveModeButton" type="button">離開</button>
+      </header>
+
+      <main class="live-body">
+        <section class="live-current-section">
+          <span class="live-label">正在評鑑</span>
+          <h2 class="live-current-title" id="liveCurrentTitle">—</h2>
+          <div class="live-current-people" id="liveCurrentPeople"></div>
+        </section>
+
+        <section class="live-timers">
+          <div class="live-timer is-primary" id="liveSongTimer">
+            <span class="live-timer-label">這首剩</span>
+            <span class="live-timer-value" id="liveSongRemaining">--:--</span>
+            <button class="live-start-button" id="liveStartButton" type="button">▶ 開始</button>
+          </div>
+          <div class="live-timer">
+            <span class="live-timer-label">拖到</span>
+            <span class="live-timer-value" id="liveDelay">--:--</span>
+          </div>
+        </section>
+
+        <section class="live-next-section">
+          <span class="live-label">下一首</span>
+          <div class="live-next-title" id="liveNextTitle">—</div>
+        </section>
+
+        <section class="live-chat-section">
+          <div class="live-chat-head">
+            <span class="live-label">鋭評一下</span>
+            <label class="live-author-field">
+              <span>你是</span>
+              <input id="liveAuthorInput" type="text" placeholder="輸入名字" autocomplete="off" />
+            </label>
+          </div>
+          <div class="live-chat-messages" id="liveChatMessages"></div>
+        </section>
+      </main>
+
+      <footer class="live-footer">
+        <form class="live-chat-form" id="liveChatForm" autocomplete="off">
+          <input id="liveChatInput" type="text" placeholder="輸入評語..." autocomplete="off" />
+          <button class="primary-button live-send-button" type="submit">傳</button>
+        </form>
+        <div class="live-nav-actions">
+          <button class="live-prev-button" id="livePrevButton" type="button" aria-label="上一首">◀</button>
+          <button class="primary-button live-next-button" id="liveNextButton" type="button">下一首 ▶</button>
+        </div>
+      </footer>
+    </div>
+
+    <section class="panel cull-panel is-locked" data-cull-section="stats" id="cullStatsPanel">
       <div class="section-title">
         <h2>剩餘統計</h2>
-        <p>每人每首歌只計一次。</p>
       </div>
       <div class="cull-stats" id="cullStats"></div>
     </section>
 
-    <section class="panel cull-panel is-locked" id="copyPanel">
+    <section class="panel cull-panel is-locked" data-cull-section="stats" id="copyPanel">
       <div class="section-title">
         <h2>複製結果</h2>
       </div>
@@ -99,10 +140,11 @@
     </section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js" integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"
+    integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil"
+    crossorigin="anonymous"></script>
   <script src="supabase-config.js"></script>
   <script src="cull.js"></script>
-  <script src="countdown.js"></script>
 </body>
 
 </html>
