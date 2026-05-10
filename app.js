@@ -461,11 +461,16 @@ function toDbSong(song) {
   };
 }
 
+function reportSyncError(action, error) {
+  console.warn(`Unable to ${action}`, error);
+  alert(`雲端同步失敗（${action}）：${error?.message ?? "未知錯誤"}\n資料只存在這台裝置，重整後會消失。請檢查網路或 Supabase 設定。`);
+}
+
 async function syncSong(song, isNew) {
   if (!state.isCloudReady) return;
   if (isNew) {
     const { error } = await state.db.from("songs").insert(toDbSong(song));
-    if (error) console.warn("Unable to insert song", error);
+    if (error) reportSyncError("新增歌曲", error);
     return;
   }
   const { error } = await state.db
@@ -480,13 +485,13 @@ async function syncSong(song, isNew) {
       updated_at: new Date(song.updatedAt).toISOString(),
     })
     .eq("id", song.id);
-  if (error) console.warn("Unable to update song", error);
+  if (error) reportSyncError("更新歌曲", error);
 }
 
 async function syncSongDelete(songId) {
   if (!state.isCloudReady) return;
   const { error } = await state.db.from("songs").delete().eq("id", songId);
-  if (error) console.warn("Unable to delete cloud song", error);
+  if (error) reportSyncError("刪除歌曲", error);
 }
 
 async function syncMembers() {
@@ -494,7 +499,7 @@ async function syncMembers() {
   const { error } = await state.db
     .from("members")
     .upsert({ id: 1, names: state.members, updated_at: new Date().toISOString() });
-  if (error) console.warn("Unable to sync members", error);
+  if (error) reportSyncError("同步名單", error);
 }
 
 function getAllPerformers() {
