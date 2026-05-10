@@ -810,28 +810,28 @@ button:active {
 
 .schedule-row {
   display: grid;
-  grid-template-columns: 36px minmax(82px, auto) minmax(72px, auto) minmax(0, 1fr);
+  grid-template-columns: 44px minmax(82px, auto) minmax(72px, auto) minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
-  padding: 10px 8px 10px 4px;
+  padding: 10px 8px;
   transition: opacity 160ms var(--ease), background 160ms var(--ease);
 }
 
 .schedule-drag-handle {
-  width: 36px;
-  height: 40px;
-  min-height: 40px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: none;
+  border: 1px solid #d7e3ef;
   border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
+  background: #f7fbff;
+  color: var(--accent);
   font-size: 1.25rem;
   line-height: 1;
   cursor: grab;
@@ -844,7 +844,7 @@ button:active {
 
 .schedule-drag-handle:hover {
   background: #eef6ff;
-  color: var(--accent);
+  border-color: #8fb6dc;
 }
 
 .schedule-drag-handle:active {

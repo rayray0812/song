@@ -250,14 +250,93 @@ begin
 end;
 $$;
 
+-- Read the persisted evaluation schedule. Stored as JSON in app_settings so it
+-- can hold start time, per-song durations, and custom ordering in one place.
+create or replace function public.get_cull_schedule(input_passphrase text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  stored_hash text;
+  schedule_value text;
+begin
+  select value into stored_hash
+  from public.app_settings
+  where key = 'cull_passphrase_hash';
+
+  if stored_hash is null or stored_hash not like '$2%' then
+    return null;
+  end if;
+
+  if stored_hash <> extensions.crypt(input_passphrase, stored_hash) then
+    return null;
+  end if;
+
+  select value into schedule_value
+  from public.app_settings
+  where key = 'cull_schedule';
+
+  if schedule_value is null or btrim(schedule_value) = '' then
+    return '{}'::jsonb;
+  end if;
+
+  return schedule_value::jsonb;
+exception
+  when others then
+    return '{}'::jsonb;
+end;
+$$;
+
+-- Persist the evaluation schedule. Passphrase-gated because app_settings is not
+-- directly exposed to anon clients.
+create or replace function public.set_cull_schedule(
+  input_passphrase text,
+  schedule_data jsonb
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  stored_hash text;
+begin
+  select value into stored_hash
+  from public.app_settings
+  where key = 'cull_passphrase_hash';
+
+  if stored_hash is null or stored_hash not like '$2%' then
+    return false;
+  end if;
+
+  if stored_hash <> extensions.crypt(input_passphrase, stored_hash) then
+    return false;
+  end if;
+
+  insert into public.app_settings (key, value, updated_at)
+  values ('cull_schedule', coalesce(schedule_data, '{}'::jsonb)::text, now())
+  on conflict (key) do update
+  set value = excluded.value,
+      updated_at = now();
+
+  return true;
+end;
+$$;
+
 revoke all on function public.verify_cull_passphrase(text) from public;
 revoke all on function public.set_song_eliminated(text, uuid, boolean) from public;
 revoke all on function public.add_cull_note(text, uuid, text, text) from public;
 revoke all on function public.delete_cull_note(text, uuid) from public;
+revoke all on function public.get_cull_schedule(text) from public;
+revoke all on function public.set_cull_schedule(text, jsonb) from public;
 grant execute on function public.verify_cull_passphrase(text) to anon;
 grant execute on function public.set_song_eliminated(text, uuid, boolean) to anon;
 grant execute on function public.add_cull_note(text, uuid, text, text) to anon;
 grant execute on function public.delete_cull_note(text, uuid) to anon;
+grant execute on function public.get_cull_schedule(text) to anon;
+grant execute on function public.set_cull_schedule(text, jsonb) to anon;
 
 insert into public.members (id, names)
 values (1, '{}')
@@ -269,6 +348,10 @@ on conflict (id) do nothing;
 --   where key = 'cull_passphrase_hash';
 insert into public.app_settings (key, value)
 values ('cull_passphrase_hash', 'CHANGE_ME')
+on conflict (key) do nothing;
+
+insert into public.app_settings (key, value)
+values ('cull_schedule', '{}')
 on conflict (key) do nothing;
 
 do $$

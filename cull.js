@@ -17,6 +17,8 @@ const state = {
   channel: null,
   passphrase: "",
   schedule: loadStoredSchedule(),
+  isScheduleCloudReady: false,
+  scheduleSaveTimer: null,
   live: defaultLiveSession(),
   author: localStorage.getItem(CHAT_AUTHOR_STORAGE_KEY) ?? "",
   chat: {},
@@ -115,6 +117,7 @@ async function unlock(passphrase) {
   gatePanel.hidden = true;
   cullPanels.forEach((panel) => panel.classList.remove("is-locked"));
   document.querySelector("#cullTabs").classList.remove("is-locked");
+  await loadCloudSchedule();
   await loadSongs();
   await loadCullNotes();
   subscribeToSongs();
@@ -234,28 +237,84 @@ function defaultScheduleState() {
   return { start: "", durations: {}, order: [] };
 }
 
-function loadStoredSchedule() {
+function normalizeSchedule(value) {
   const fallback = defaultScheduleState();
+  if (!value || typeof value !== "object") return fallback;
+  const source = value.start !== undefined ? value : value["1"];
+  if (!source || typeof source !== "object") return fallback;
+  if (typeof source.start === "string") fallback.start = source.start;
+  if (source.durations && typeof source.durations === "object" && !Array.isArray(source.durations)) {
+    fallback.durations = { ...source.durations };
+  }
+  if (Array.isArray(source.order)) {
+    fallback.order = source.order.filter((id) => typeof id === "string");
+  }
+  return fallback;
+}
+
+function scheduleHasData(schedule) {
+  return Boolean(
+    schedule?.start ||
+      Object.keys(schedule?.durations ?? {}).length > 0 ||
+      (Array.isArray(schedule?.order) && schedule.order.length > 0),
+  );
+}
+
+function loadStoredSchedule() {
   try {
     const raw = localStorage.getItem(SCHEDULE_STORAGE_KEY);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    const source = parsed?.start !== undefined ? parsed : parsed?.["1"];
-    if (source) {
-      if (typeof source.start === "string") fallback.start = source.start;
-      if (source.durations && typeof source.durations === "object") {
-        fallback.durations = { ...source.durations };
-      }
-      if (Array.isArray(source.order)) {
-        fallback.order = source.order.filter((id) => typeof id === "string");
-      }
-    }
+    if (!raw) return defaultScheduleState();
+    return normalizeSchedule(JSON.parse(raw));
   } catch {}
-  return fallback;
+  return defaultScheduleState();
 }
 
 function persistSchedule() {
   localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(state.schedule));
+  queueCloudScheduleSave();
+}
+
+async function loadCloudSchedule() {
+  if (!state.db || !state.passphrase) return;
+  const localSchedule = state.schedule;
+  const { data, error } = await state.db.rpc("get_cull_schedule", {
+    input_passphrase: state.passphrase,
+  });
+  if (error || !data) {
+    state.isScheduleCloudReady = !error;
+    return;
+  }
+  const cloudSchedule = normalizeSchedule(data);
+  if (!scheduleHasData(cloudSchedule) && scheduleHasData(localSchedule)) {
+    state.schedule = localSchedule;
+    state.isScheduleCloudReady = true;
+    saveCloudSchedule();
+    return;
+  }
+  state.schedule = cloudSchedule;
+  state.isScheduleCloudReady = true;
+  localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(state.schedule));
+  scheduleStartInput.value = state.schedule.start;
+}
+
+function queueCloudScheduleSave() {
+  if (!state.db || !state.passphrase) return;
+  clearTimeout(state.scheduleSaveTimer);
+  state.scheduleSaveTimer = setTimeout(saveCloudSchedule, 350);
+}
+
+async function saveCloudSchedule() {
+  if (!state.db || !state.passphrase) return;
+  const { data, error } = await state.db.rpc("set_cull_schedule", {
+    input_passphrase: state.passphrase,
+    schedule_data: state.schedule,
+  });
+  if (error || data !== true) {
+    console.warn("Unable to sync schedule", error);
+    state.isScheduleCloudReady = false;
+    return;
+  }
+  state.isScheduleCloudReady = true;
 }
 
 function defaultLiveSession() {
