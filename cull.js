@@ -51,6 +51,8 @@ const liveEvalTag = document.querySelector("#liveEvalTag");
 const liveClock = document.querySelector("#liveClock");
 const liveCurrentTitle = document.querySelector("#liveCurrentTitle");
 const liveCurrentPeople = document.querySelector("#liveCurrentPeople");
+const liveLyricsSection = document.querySelector("#liveLyricsSection");
+const liveLyricsContent = document.querySelector("#liveLyricsContent");
 const liveSongTimer = document.querySelector("#liveSongTimer");
 const liveSongRemaining = document.querySelector("#liveSongRemaining");
 const liveStartButton = document.querySelector("#liveStartButton");
@@ -62,6 +64,11 @@ const liveChatForm = document.querySelector("#liveChatForm");
 const liveChatInput = document.querySelector("#liveChatInput");
 const liveNextButton = document.querySelector("#liveNextButton");
 const livePrevButton = document.querySelector("#livePrevButton");
+const liveCelebration = document.querySelector("#liveCelebration");
+const celebrationConfetti = document.querySelector("#celebrationConfetti");
+const celebrationFireworks = document.querySelector("#celebrationFireworks");
+const celebrationSubtitle = document.querySelector("#celebrationSubtitle");
+const celebrationExitButton = document.querySelector("#celebrationExitButton");
 
 scheduleStartInput.value = state.schedule.start;
 liveAuthorInput.value = state.author;
@@ -617,6 +624,7 @@ function enterLiveMode() {
 
 function exitLiveMode() {
   state.live = defaultLiveSession();
+  hideCelebration();
   hideLiveMode();
 }
 
@@ -640,10 +648,169 @@ function hideLiveMode() {
 function nextLiveSong() {
   const rows = getLiveScheduleRows();
   if (state.live.songIndex >= rows.length) return;
+  const willFinish = state.live.songIndex >= rows.length - 1;
   animateSongChange(() => {
     state.live.songIndex += 1;
     state.live.songStartedAt = null;
   });
+  if (willFinish) {
+    setTimeout(() => showCelebration(rows.length), 220);
+  }
+}
+
+function showCelebration(totalSongs) {
+  if (!liveCelebration) return;
+  liveCelebration.hidden = false;
+  const elapsedSec = state.live.evalStartedAt
+    ? Math.max(0, Math.floor((Date.now() - state.live.evalStartedAt) / 1000))
+    : 0;
+  const m = Math.floor(elapsedSec / 60);
+  const s = elapsedSec % 60;
+  celebrationSubtitle.textContent = `辛苦了！共評鑑 ${totalSongs} 首，花了 ${m} 分 ${s} 秒。`;
+  spawnConfetti();
+  spawnFireworks();
+}
+
+function hideCelebration() {
+  if (!liveCelebration) return;
+  liveCelebration.hidden = true;
+  celebrationConfetti.replaceChildren();
+  celebrationFireworks.replaceChildren();
+}
+
+function spawnConfetti() {
+  celebrationConfetti.replaceChildren();
+  const colors = ["#ffe169", "#fbbf24", "#235f9c", "#5a3fb5", "#b14a8a", "#4ade80", "#ef4444", "#ffffff"];
+  const shapes = ["square", "circle", "strip"];
+  const fragment = document.createDocumentFragment();
+  for (let i = 0; i < 110; i++) {
+    const piece = document.createElement("div");
+    piece.className = `confetti-piece is-${shapes[Math.floor(Math.random() * shapes.length)]}`;
+    piece.style.left = `${Math.random() * 100}%`;
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDelay = `${Math.random() * 1.2}s`;
+    piece.style.animationDuration = `${3 + Math.random() * 2.5}s`;
+    piece.style.setProperty("--spin", `${(Math.random() * 1080 - 540).toFixed(0)}deg`);
+    piece.style.setProperty("--drift", `${(Math.random() * 200 - 100).toFixed(0)}px`);
+    fragment.appendChild(piece);
+  }
+  celebrationConfetti.appendChild(fragment);
+}
+
+function spawnFireworks() {
+  celebrationFireworks.replaceChildren();
+  spawnSparkles(50);
+
+  const launchOne = () => {
+    const left = `${8 + Math.random() * 84}%`;
+    const top = `${12 + Math.random() * 58}%`;
+    spawnFirework(left, top);
+  };
+
+  // Opening barrage: 6 rapid bursts
+  for (let i = 0; i < 6; i++) {
+    setTimeout(launchOne, i * 160);
+  }
+
+  // Sustained main show: ~10 sec
+  let bursts = 6;
+  const interval = setInterval(() => {
+    if (liveCelebration.hidden) {
+      clearInterval(interval);
+      return;
+    }
+    if (bursts >= 32) {
+      clearInterval(interval);
+      // Grand finale: dense cluster
+      if (!liveCelebration.hidden) {
+        for (let i = 0; i < 12; i++) {
+          setTimeout(launchOne, i * 90);
+        }
+        // Refresh sparkles for the finale glow
+        setTimeout(() => spawnSparkles(40), 200);
+      }
+      return;
+    }
+    launchOne();
+    bursts += 1;
+    if (Math.random() > 0.4) {
+      setTimeout(launchOne, 180);
+      bursts += 1;
+    }
+    if (Math.random() > 0.75) {
+      setTimeout(launchOne, 360);
+      bursts += 1;
+    }
+  }, 550);
+}
+
+function spawnSparkles(count) {
+  const fragment = document.createDocumentFragment();
+  for (let i = 0; i < count; i++) {
+    const sparkle = document.createElement("div");
+    sparkle.className = "sparkle";
+    sparkle.style.left = `${Math.random() * 100}%`;
+    sparkle.style.top = `${Math.random() * 100}%`;
+    sparkle.style.animationDelay = `${(Math.random() * 4).toFixed(2)}s`;
+    sparkle.style.animationDuration = `${(1.6 + Math.random() * 2).toFixed(2)}s`;
+    sparkle.style.setProperty("--size", `${(4 + Math.random() * 6).toFixed(1)}px`);
+    fragment.appendChild(sparkle);
+  }
+  celebrationFireworks.appendChild(fragment);
+}
+
+function spawnFirework(left, top) {
+  const burst = document.createElement("div");
+  burst.className = "firework";
+  burst.style.left = left;
+  burst.style.top = top;
+
+  const palettes = [
+    ["#ffe169", "#fbbf24", "#fff7c2"],
+    ["#b14a8a", "#5a3fb5", "#fbcfe8"],
+    ["#235f9c", "#4d80b5", "#cbd7e6"],
+    ["#4ade80", "#22c55e", "#bbf7d0"],
+    ["#ef4444", "#fbbf24", "#fff"],
+    ["#fff", "#ffe169", "#fbbf24"],
+  ];
+  const palette = palettes[Math.floor(Math.random() * palettes.length)];
+  // Variant: 0 = normal, 1 = ring (uniform distance), 2 = double ring
+  const variant = Math.floor(Math.random() * 3);
+  const particleCount = variant === 2 ? 48 : 32 + Math.floor(Math.random() * 14);
+  const baseDistance = 110 + Math.random() * 80;
+
+  for (let i = 0; i < particleCount; i++) {
+    const particle = document.createElement("div");
+    particle.className = "firework-particle";
+    const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.12;
+    let dist;
+    if (variant === 1) {
+      dist = baseDistance;
+    } else if (variant === 2) {
+      dist = baseDistance * (i % 2 === 0 ? 0.65 : 1);
+    } else {
+      dist = baseDistance * (0.55 + Math.random() * 0.6);
+    }
+    const color = palette[Math.floor(Math.random() * palette.length)];
+    particle.style.setProperty("--dx", `${(Math.cos(angle) * dist).toFixed(1)}px`);
+    particle.style.setProperty("--dy", `${(Math.sin(angle) * dist).toFixed(1)}px`);
+    particle.style.background = color;
+    particle.style.color = color;
+    particle.style.animationDelay = `${(Math.random() * 0.08).toFixed(3)}s`;
+    const size = 4 + Math.random() * 4;
+    particle.style.width = `${size.toFixed(1)}px`;
+    particle.style.height = `${size.toFixed(1)}px`;
+    burst.appendChild(particle);
+  }
+
+  // Center flash
+  const flash = document.createElement("div");
+  flash.className = "firework-flash";
+  flash.style.color = palette[0];
+  burst.appendChild(flash);
+
+  celebrationFireworks.appendChild(burst);
+  setTimeout(() => burst.remove(), 2500);
 }
 
 function prevLiveSong() {
@@ -757,9 +924,19 @@ function renderLiveMode() {
     liveCurrentPeople.innerHTML = people || `<span class="live-people-empty">未填人員</span>`;
     liveNextButton.disabled = false;
     liveNextButton.textContent = next ? "下一首 ▶" : "結束評鑑 ▶";
+    const lyrics = (current.song.lyrics ?? "").trim();
+    if (lyrics) {
+      liveLyricsSection.hidden = false;
+      liveLyricsContent.textContent = lyrics;
+    } else {
+      liveLyricsSection.hidden = true;
+      liveLyricsContent.textContent = "";
+    }
   } else {
     liveCurrentTitle.textContent = "評鑑結束";
     liveCurrentPeople.innerHTML = "";
+    liveLyricsSection.hidden = true;
+    liveLyricsContent.textContent = "";
     liveNextButton.disabled = true;
   }
 
@@ -1055,6 +1232,7 @@ exitLiveModeButton.addEventListener("click", exitLiveMode);
 liveNextButton.addEventListener("click", nextLiveSong);
 livePrevButton.addEventListener("click", prevLiveSong);
 liveStartButton.addEventListener("click", startCurrentSong);
+celebrationExitButton.addEventListener("click", exitLiveMode);
 
 liveAuthorInput.addEventListener("input", () => {
   state.author = liveAuthorInput.value;

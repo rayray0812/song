@@ -94,6 +94,13 @@
           <div class="live-current-people" id="liveCurrentPeople"></div>
         </section>
 
+        <section class="live-lyrics-section" id="liveLyricsSection" hidden>
+          <details class="live-lyrics-details" open>
+            <summary>歌詞</summary>
+            <div class="live-lyrics-content" id="liveLyricsContent"></div>
+          </details>
+        </section>
+
         <section class="live-timers">
           <div class="live-timer is-primary" id="liveSongTimer">
             <span class="live-timer-label">這首剩</span>
@@ -133,6 +140,17 @@
           <button class="primary-button live-next-button" id="liveNextButton" type="button">下一首 ▶</button>
         </div>
       </footer>
+
+      <div class="live-celebration" id="liveCelebration" hidden>
+        <div class="celebration-fireworks" id="celebrationFireworks" aria-hidden="true"></div>
+        <div class="celebration-confetti" id="celebrationConfetti" aria-hidden="true"></div>
+        <div class="celebration-content">
+          <div class="celebration-emoji">🎉</div>
+          <h2 class="celebration-title">評鑑結束</h2>
+          <p class="celebration-subtitle" id="celebrationSubtitle">辛苦了</p>
+          <button class="primary-button celebration-exit-button" id="celebrationExitButton" type="button">離開評鑑模式</button>
+        </div>
+      </div>
     </div>
 
     <section class="panel cull-panel is-locked" data-cull-section="stats" id="cullStatsPanel">
