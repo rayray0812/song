@@ -231,7 +231,7 @@ function refreshNotesInCullList() {
 }
 
 function defaultScheduleState() {
-  return { start: "", durations: {} };
+  return { start: "", durations: {}, order: [] };
 }
 
 function loadStoredSchedule() {
@@ -245,6 +245,9 @@ function loadStoredSchedule() {
       if (typeof source.start === "string") fallback.start = source.start;
       if (source.durations && typeof source.durations === "object") {
         fallback.durations = { ...source.durations };
+      }
+      if (Array.isArray(source.order)) {
+        fallback.order = source.order.filter((id) => typeof id === "string");
       }
     }
   } catch {}
@@ -277,9 +280,21 @@ function formatMinutes(total) {
 }
 
 function getScheduledSongs() {
-  return [...state.songs]
-    .filter((song) => !song.is_eliminated)
+  const passing = state.songs.filter((song) => !song.is_eliminated);
+  const byId = new Map(passing.map((song) => [song.id, song]));
+  const ordered = [];
+  const seen = new Set();
+  (state.schedule.order ?? []).forEach((id) => {
+    const song = byId.get(id);
+    if (song && !seen.has(id)) {
+      ordered.push(song);
+      seen.add(id);
+    }
+  });
+  const rest = passing
+    .filter((song) => !seen.has(song.id))
     .sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
+  return [...ordered, ...rest];
 }
 
 function getDurationFor(songId) {
@@ -316,10 +331,12 @@ function renderSchedule() {
     ...rows.map(({ song, duration, slotStart, slotEnd }) => {
       const row = document.createElement("div");
       row.className = "schedule-row";
+      row.dataset.songId = song.id;
       const slotText = slotStart === null
         ? "—"
         : `${formatMinutes(slotStart)}-${formatMinutes(slotEnd)}`;
       row.innerHTML = `
+        <button class="schedule-drag-handle" type="button" aria-label="拖曳調整順序" data-song-id="${song.id}">☰</button>
         <span class="schedule-slot">${slotText}</span>
         <label class="schedule-duration">
           <input type="number" min="0" step="1" inputmode="numeric"
@@ -372,6 +389,77 @@ function copyScheduledSongs() {
       copyScheduleButton.textContent = "複製排程";
     }, 1200);
   });
+}
+
+let dragState = null;
+
+function startScheduleDrag(handle, event) {
+  const row = handle.closest(".schedule-row");
+  if (!row) return;
+  const rect = row.getBoundingClientRect();
+  const offsetY = event.clientY - rect.top;
+  const offsetX = event.clientX - rect.left;
+
+  const ghost = row.cloneNode(true);
+  ghost.classList.add("is-drag-ghost");
+  ghost.style.position = "fixed";
+  ghost.style.left = `${rect.left}px`;
+  ghost.style.top = `${rect.top}px`;
+  ghost.style.width = `${rect.width}px`;
+  ghost.style.margin = "0";
+  ghost.style.zIndex = "1000";
+  ghost.style.pointerEvents = "none";
+  document.body.appendChild(ghost);
+
+  row.classList.add("is-dragging");
+  handle.setPointerCapture(event.pointerId);
+
+  dragState = { row, ghost, handle, offsetX, offsetY, pointerId: event.pointerId };
+}
+
+function moveScheduleDrag(event) {
+  if (!dragState || event.pointerId !== dragState.pointerId) return;
+  const { ghost, row, offsetX, offsetY } = dragState;
+  ghost.style.left = `${event.clientX - offsetX}px`;
+  ghost.style.top = `${event.clientY - offsetY}px`;
+
+  const others = [...scheduleList.querySelectorAll(".schedule-row:not(.is-dragging)")];
+  const pointerY = event.clientY;
+
+  for (const other of others) {
+    const otherRect = other.getBoundingClientRect();
+    const mid = (otherRect.top + otherRect.bottom) / 2;
+    if (pointerY < mid) {
+      if (row.nextElementSibling !== other) {
+        scheduleList.insertBefore(row, other);
+      }
+      return;
+    }
+  }
+  // Past the last row → append
+  if (row !== scheduleList.lastElementChild) {
+    scheduleList.appendChild(row);
+  }
+}
+
+function endScheduleDrag(event) {
+  if (!dragState || event.pointerId !== dragState.pointerId) return;
+  const { row, ghost, handle } = dragState;
+
+  ghost.remove();
+  row.classList.remove("is-dragging");
+  if (handle.hasPointerCapture?.(event.pointerId)) {
+    handle.releasePointerCapture(event.pointerId);
+  }
+
+  const newOrder = [...scheduleList.querySelectorAll(".schedule-row")]
+    .map((r) => r.dataset.songId)
+    .filter(Boolean);
+  state.schedule.order = newOrder;
+  persistSchedule();
+  updateScheduleSlots();
+
+  dragState = null;
 }
 
 function getLiveScheduleRows() {
@@ -835,6 +923,18 @@ scheduleList.addEventListener("input", (event) => {
   persistSchedule();
   updateScheduleSlots();
 });
+
+scheduleList.addEventListener("pointerdown", (event) => {
+  const handle = event.target.closest(".schedule-drag-handle");
+  if (!handle) return;
+  if (event.button !== undefined && event.button !== 0) return;
+  event.preventDefault();
+  startScheduleDrag(handle, event);
+});
+
+scheduleList.addEventListener("pointermove", moveScheduleDrag);
+scheduleList.addEventListener("pointerup", endScheduleDrag);
+scheduleList.addEventListener("pointercancel", endScheduleDrag);
 
 copyScheduleButton.addEventListener("click", copyScheduledSongs);
 
