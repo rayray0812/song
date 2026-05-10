@@ -26,10 +26,12 @@
 
       const days = Math.floor(safe / 86400000);
       const hours = Math.floor((safe % 86400000) / 3600000);
+      const minutes = Math.floor((safe % 3600000) / 60000);
       const seconds = Math.floor((safe % 60000) / 1000);
 
       setNum(card, 'days', days);
       setNum(card, 'hours', String(hours).padStart(2, '0'));
+      setNum(card, 'minutes', String(minutes).padStart(2, '0'));
       setNum(card, 'seconds', String(seconds).padStart(2, '0'));
 
       const fill = card.querySelector('.countdown-progress-fill');
