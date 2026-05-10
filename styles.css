@@ -2016,6 +2016,75 @@ body.live-mode-open {
   animation: none;
 }
 
+.countdown-card.is-today .countdown-tag::before {
+  background: #ffe169;
+  box-shadow: 0 0 14px #ffe169;
+  animation-duration: 0.9s;
+}
+
+.countdown-card.is-today .cd-mini-days .cd-num,
+.countdown-card.is-today .cd-mini-days .cd-suffix,
+.countdown-card.is-past .cd-mini-days .cd-num,
+.countdown-card.is-past .cd-mini-days .cd-suffix {
+  display: none;
+}
+
+.countdown-card.is-today .cd-mini-days::after,
+.countdown-card.is-past .cd-mini-days::after {
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.countdown-card.is-today .cd-mini-days::after {
+  content: "今天";
+  color: #ffe169;
+  text-shadow: 0 0 12px rgba(255, 220, 150, 0.5);
+}
+
+.countdown-card.is-past .cd-mini-days::after {
+  content: "結束了";
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 1.1rem;
+}
+
+.countdown-card.is-today .countdown-days .cd-prefix,
+.countdown-card.is-today .countdown-days .cd-num,
+.countdown-card.is-today .countdown-days .cd-suffix,
+.countdown-card.is-past .countdown-days .cd-prefix,
+.countdown-card.is-past .countdown-days .cd-num,
+.countdown-card.is-past .countdown-days .cd-suffix {
+  display: none;
+}
+
+.countdown-card.is-today .countdown-days::after,
+.countdown-card.is-past .countdown-days::after {
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.3);
+}
+
+.countdown-card.is-today .countdown-days::after {
+  content: "今天";
+  font-size: clamp(2.6rem, 11vw, 4rem);
+  color: #fff7c2;
+  text-shadow: 0 0 24px rgba(255, 220, 150, 0.55);
+}
+
+.countdown-card.is-past .countdown-days::after {
+  content: "結束了";
+  font-size: clamp(2rem, 8vw, 2.8rem);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.countdown-card.is-today .countdown-detail,
+.countdown-card.is-today .countdown-progress,
+.countdown-card.is-past .countdown-detail,
+.countdown-card.is-past .countdown-progress {
+  display: none;
+}
+
 .countdown-card.is-mini {
   display: flex;
   align-items: center;

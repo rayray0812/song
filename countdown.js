@@ -18,11 +18,24 @@
 
   function tick() {
     const now = Date.now();
+    const todayMidnight = new Date(now);
+    todayMidnight.setHours(0, 0, 0, 0);
+    const todayMs = todayMidnight.getTime();
+
     cards.forEach((card) => {
-      const target = new Date(card.dataset.target).getTime();
+      const targetDate = new Date(card.dataset.target);
+      const target = targetDate.getTime();
       const diff = target - now;
-      const isPast = diff <= 0;
-      const safe = isPast ? 0 : diff;
+      const safe = diff <= 0 ? 0 : diff;
+
+      const targetMidnight = new Date(
+        targetDate.getFullYear(),
+        targetDate.getMonth(),
+        targetDate.getDate(),
+      ).getTime();
+      const dayDiff = Math.round((targetMidnight - todayMs) / 86400000);
+      const isToday = dayDiff === 0;
+      const isPast = dayDiff < 0;
 
       const days = Math.floor(safe / 86400000);
       const hours = Math.floor((safe % 86400000) / 3600000);
@@ -41,8 +54,9 @@
         fill.style.width = pct.toFixed(2) + '%';
       }
 
-      card.classList.toggle('is-soon', !isPast && days < 7);
-      card.classList.toggle('is-imminent', !isPast && safe < 86400000);
+      card.classList.toggle('is-soon', !isPast && !isToday && days < 7);
+      card.classList.toggle('is-imminent', !isPast && !isToday && safe < 86400000);
+      card.classList.toggle('is-today', isToday);
       card.classList.toggle('is-past', isPast);
     });
   }
