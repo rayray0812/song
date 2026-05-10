@@ -431,6 +431,22 @@ async function loadCloudData() {
   writeJson(storageKeys.members, state.members);
   updateMemberUi();
   render();
+  refreshSubmissionsState();
+}
+
+async function refreshSubmissionsState() {
+  if (!state.db) return;
+  const { data, error } = await state.db.rpc("get_submissions_open");
+  if (error) return;
+  applySubmissionsOpen(data !== false);
+}
+
+function applySubmissionsOpen(isOpen) {
+  const banner = document.querySelector("#submissionsClosedBanner");
+  const formPanel = document.querySelector("#formPanel");
+  if (!banner || !formPanel) return;
+  banner.hidden = isOpen;
+  formPanel.hidden = !isOpen;
 }
 
 function fromDbSong(song) {
@@ -913,6 +929,10 @@ createCreditFields();
 updateMemberUi();
 render();
 loadCloudData();
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") refreshSubmissionsState();
+});
 
 roleFields.addEventListener("click", (event) => {
   const button = event.target.closest(".add-role-button");

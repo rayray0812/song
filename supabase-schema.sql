@@ -325,18 +325,63 @@ begin
 end;
 $$;
 
+-- Read whether song reporting (報歌) is currently open. Public — anyone needs
+-- this to know whether to show the form on the main page. Defaults to open.
+create or replace function public.get_submissions_open()
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare v text;
+begin
+  select value into v from public.app_settings where key = 'submissions_open';
+  return coalesce(v, 'true') = 'true';
+end;
+$$;
+
+-- Toggle reporting open/closed. Passphrase-gated like the other admin RPCs.
+create or replace function public.set_submissions_open(
+  input_passphrase text,
+  is_open boolean
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare stored_hash text;
+begin
+  select value into stored_hash from public.app_settings where key = 'cull_passphrase_hash';
+  if stored_hash is null or stored_hash not like '$2%' then return false; end if;
+  if stored_hash <> extensions.crypt(input_passphrase, stored_hash) then return false; end if;
+
+  insert into public.app_settings (key, value, updated_at)
+  values ('submissions_open', case when is_open then 'true' else 'false' end, now())
+  on conflict (key) do update
+  set value = excluded.value,
+      updated_at = now();
+
+  return true;
+end;
+$$;
+
 revoke all on function public.verify_cull_passphrase(text) from public;
 revoke all on function public.set_song_eliminated(text, uuid, boolean) from public;
 revoke all on function public.add_cull_note(text, uuid, text, text) from public;
 revoke all on function public.delete_cull_note(text, uuid) from public;
 revoke all on function public.get_cull_schedule(text) from public;
 revoke all on function public.set_cull_schedule(text, jsonb) from public;
+revoke all on function public.get_submissions_open() from public;
+revoke all on function public.set_submissions_open(text, boolean) from public;
 grant execute on function public.verify_cull_passphrase(text) to anon;
 grant execute on function public.set_song_eliminated(text, uuid, boolean) to anon;
 grant execute on function public.add_cull_note(text, uuid, text, text) to anon;
 grant execute on function public.delete_cull_note(text, uuid) to anon;
 grant execute on function public.get_cull_schedule(text) to anon;
 grant execute on function public.set_cull_schedule(text, jsonb) to anon;
+grant execute on function public.get_submissions_open() to anon;
+grant execute on function public.set_submissions_open(text, boolean) to anon;
 
 insert into public.members (id, names)
 values (1, '{}')
@@ -352,6 +397,10 @@ on conflict (key) do nothing;
 
 insert into public.app_settings (key, value)
 values ('cull_schedule', '{}')
+on conflict (key) do nothing;
+
+insert into public.app_settings (key, value)
+values ('submissions_open', 'true')
 on conflict (key) do nothing;
 
 do $$

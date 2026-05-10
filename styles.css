@@ -397,6 +397,33 @@ button:active {
   background: var(--accent-dark);
 }
 
+.primary-button.is-danger {
+  background: var(--danger);
+}
+
+.primary-button.is-danger:active {
+  background: #8a1d18;
+}
+
+.submissions-closed-banner {
+  background: linear-gradient(135deg, #fff8f7, #ffece9);
+  border-color: #f0c7c2;
+}
+
+.submissions-closed-banner .closed-banner-body {
+  display: grid;
+  gap: 6px;
+}
+
+.submissions-closed-banner h2 {
+  color: var(--danger);
+}
+
+.submissions-closed-banner p {
+  color: #6b3c39;
+  font-size: 0.95rem;
+}
+
 .ghost-button {
   background: #fff;
   border-color: var(--line);

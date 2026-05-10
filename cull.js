@@ -43,6 +43,8 @@ const scheduleList = document.querySelector("#scheduleList");
 const cullTabButtons = document.querySelectorAll(".cull-tab-button");
 const cullSections = document.querySelectorAll("[data-cull-section]");
 const enterLiveModeButton = document.querySelector("#enterLiveModeButton");
+const reportingStatusText = document.querySelector("#reportingStatusText");
+const toggleReportingButton = document.querySelector("#toggleReportingButton");
 const exitLiveModeButton = document.querySelector("#exitLiveModeButton");
 const liveMode = document.querySelector("#liveMode");
 const liveEvalTag = document.querySelector("#liveEvalTag");
@@ -120,8 +122,46 @@ async function unlock(passphrase) {
   await loadCloudSchedule();
   await loadSongs();
   await loadCullNotes();
+  await loadReportingState();
   subscribeToSongs();
   subscribeToCullNotes();
+}
+
+async function loadReportingState() {
+  if (!state.db) return;
+  const { data, error } = await state.db.rpc("get_submissions_open");
+  if (error) {
+    reportingStatusText.textContent = "讀取狀態失敗。";
+    return;
+  }
+  state.reportingOpen = data !== false;
+  renderReportingControl();
+}
+
+function renderReportingControl() {
+  const open = state.reportingOpen !== false;
+  reportingStatusText.textContent = open ? "目前：開放報歌中 ✅" : "目前：報歌已截止 🔒";
+  toggleReportingButton.textContent = open ? "關閉報歌" : "開放報歌";
+  toggleReportingButton.classList.toggle("is-danger", open);
+  toggleReportingButton.disabled = false;
+}
+
+async function toggleReporting() {
+  const next = !(state.reportingOpen !== false);
+  const action = next ? "開放" : "關閉";
+  if (!confirm(`確定要${action}報歌嗎？`)) return;
+  toggleReportingButton.disabled = true;
+  const { data, error } = await state.db.rpc("set_submissions_open", {
+    input_passphrase: state.passphrase,
+    is_open: next,
+  });
+  if (error || data !== true) {
+    alert(`切換失敗${error ? `：${error.message}` : "（密語不正確或 SQL 未更新）"}`);
+    toggleReportingButton.disabled = false;
+    return;
+  }
+  state.reportingOpen = next;
+  renderReportingControl();
 }
 
 async function loadSongs() {
@@ -964,6 +1004,7 @@ cullList.addEventListener("change", (event) => {
 });
 
 copyPassedButton.addEventListener("click", copyPassedSongs);
+toggleReportingButton.addEventListener("click", toggleReporting);
 
 scheduleStartInput.addEventListener("input", () => {
   state.schedule.start = scheduleStartInput.value;
