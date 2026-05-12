@@ -667,8 +667,13 @@ function showCelebration(totalSongs) {
   const m = Math.floor(elapsedSec / 60);
   const s = elapsedSec % 60;
   celebrationSubtitle.textContent = `辛苦了！共評鑑 ${totalSongs} 首，花了 ${m} 分 ${s} 秒。`;
+  if (prefersReducedMotion()) return;
   spawnConfetti();
   spawnFireworks();
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
 function hideCelebration() {
@@ -683,7 +688,7 @@ function spawnConfetti() {
   const colors = ["#ffe169", "#fbbf24", "#235f9c", "#5a3fb5", "#b14a8a", "#4ade80", "#ef4444", "#ffffff"];
   const shapes = ["square", "circle", "strip"];
   const fragment = document.createDocumentFragment();
-  for (let i = 0; i < 110; i++) {
+  for (let i = 0; i < 80; i++) {
     const piece = document.createElement("div");
     piece.className = `confetti-piece is-${shapes[Math.floor(Math.random() * shapes.length)]}`;
     piece.style.left = `${Math.random() * 100}%`;
@@ -712,36 +717,32 @@ function spawnFireworks() {
     setTimeout(launchOne, i * 160);
   }
 
-  // Sustained main show: ~10 sec
+  // Sustained main show: ~9 sec
   let bursts = 6;
   const interval = setInterval(() => {
     if (liveCelebration.hidden) {
       clearInterval(interval);
       return;
     }
-    if (bursts >= 32) {
+    if (bursts >= 24) {
       clearInterval(interval);
       // Grand finale: dense cluster
       if (!liveCelebration.hidden) {
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 10; i++) {
           setTimeout(launchOne, i * 90);
         }
         // Refresh sparkles for the finale glow
-        setTimeout(() => spawnSparkles(40), 200);
+        setTimeout(() => spawnSparkles(32), 200);
       }
       return;
     }
     launchOne();
     bursts += 1;
-    if (Math.random() > 0.4) {
-      setTimeout(launchOne, 180);
+    if (Math.random() > 0.5) {
+      setTimeout(launchOne, 200);
       bursts += 1;
     }
-    if (Math.random() > 0.75) {
-      setTimeout(launchOne, 360);
-      bursts += 1;
-    }
-  }, 550);
+  }, 580);
 }
 
 function spawnSparkles(count) {

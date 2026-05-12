@@ -3,6 +3,7 @@
   if (!cards.length) return;
 
   const PROGRESS_WINDOW_MS = 60 * 24 * 60 * 60 * 1000;
+  let timerId = null;
 
   function setNum(card, unit, value) {
     const el = card.querySelector('[data-unit="' + unit + '"]');
@@ -61,6 +62,22 @@
     });
   }
 
-  tick();
-  setInterval(tick, 1000);
+  function start() {
+    if (timerId !== null) return;
+    tick();
+    timerId = setInterval(tick, 1000);
+  }
+
+  function stop() {
+    if (timerId === null) return;
+    clearInterval(timerId);
+    timerId = null;
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stop();
+    else start();
+  });
+
+  start();
 })();
