@@ -1138,7 +1138,7 @@ function renderStats() {
       row.className = "cull-stat-row";
       row.innerHTML = `
         <strong>${escapeHtml(person.name)}</strong>
-        <span class="cull-stat-fee">應繳 $${formatMoney(Math.round(person.fee))}</span>
+        <span class="cull-stat-fee">應繳 $${formatMoney(Math.ceil(person.fee))}</span>
         <span>剩 ${person.remaining} 首</span>
         <span>刷 ${person.eliminated} 首</span>
       `;
