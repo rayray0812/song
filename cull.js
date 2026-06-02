@@ -2,6 +2,7 @@ const SCHEDULE_STORAGE_KEY = "cullScheduleByEval";
 const CHAT_AUTHOR_STORAGE_KEY = "cullChatAuthor";
 const ACTIVE_TAB_STORAGE_KEY = "cullActiveTab";
 const DEFAULT_DURATION_MIN = 5;
+const FEE_PER_SONG = 500;
 // One-time cleanup of legacy ephemeral keys (broadcast-era).
 const LEGACY_CLEANUP_FLAG = "cullLegacyCleaned_v1";
 if (!localStorage.getItem(LEGACY_CLEANUP_FLAG)) {
@@ -1095,38 +1096,59 @@ async function sendChatMessage(content) {
 
 function renderStats() {
   const stats = new Map();
+  let passedCount = 0;
 
   state.songs.forEach((song) => {
-    uniqueNames(Object.values(song.performers ?? {})).forEach((name) => {
-      const current = stats.get(name) ?? { name, remaining: 0, eliminated: 0 };
+    const names = uniqueNames(Object.values(song.performers ?? {}));
+    // 每首通過的歌 500 元開歌費，由該首歌的所有樂手平均分擔。
+    const share = !song.is_eliminated && names.length > 0 ? FEE_PER_SONG / names.length : 0;
+    if (!song.is_eliminated) passedCount += 1;
+    names.forEach((name) => {
+      const current = stats.get(name) ?? { name, remaining: 0, eliminated: 0, fee: 0 };
       if (song.is_eliminated) {
         current.eliminated += 1;
       } else {
         current.remaining += 1;
+        current.fee += share;
       }
       stats.set(name, current);
     });
   });
 
-  const rows = [...stats.values()].sort((a, b) => b.remaining - a.remaining || b.eliminated - a.eliminated || a.name.localeCompare(b.name, "zh-Hant"));
+  const rows = [...stats.values()].sort((a, b) => b.fee - a.fee || b.remaining - a.remaining || b.eliminated - a.eliminated || a.name.localeCompare(b.name, "zh-Hant"));
 
   if (rows.length === 0) {
     cullStats.innerHTML = `<div class="empty-state">尚無人員統計</div>`;
     return;
   }
 
+  const totalFee = passedCount * FEE_PER_SONG;
+  const summary = document.createElement("div");
+  summary.className = "cull-fee-summary";
+  summary.innerHTML = `
+    <span class="cull-fee-summary-label">開歌費合計</span>
+    <span class="cull-fee-summary-value">$${formatMoney(totalFee)}</span>
+    <span class="cull-fee-summary-note">${passedCount} 首通過 × $${FEE_PER_SONG}／首，每首由該團樂手平分</span>
+  `;
+
   cullStats.replaceChildren(
+    summary,
     ...rows.map((person) => {
       const row = document.createElement("div");
       row.className = "cull-stat-row";
       row.innerHTML = `
         <strong>${escapeHtml(person.name)}</strong>
+        <span class="cull-stat-fee">應繳 $${formatMoney(Math.round(person.fee))}</span>
         <span>剩 ${person.remaining} 首</span>
         <span>刷 ${person.eliminated} 首</span>
       `;
       return row;
     }),
   );
+}
+
+function formatMoney(amount) {
+  return Math.round(amount).toLocaleString("en-US");
 }
 
 async function toggleSong(songId, isEliminated) {
