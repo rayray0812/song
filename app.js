@@ -25,13 +25,18 @@ const singlePersonRoles = new Set(["Bass", "鼓", "木箱鼓"]);
 const storageKeys = {
   songs: "club-song-list:songs",
   members: "club-song-list:members",
+  dataVersion: "club-song-list:data-version",
 };
 
 const defaultMembers = ["陳小明", "陳怡君", "林家豪", "王品安", "張育瑋"];
+const staticSiteData = window.SITE_DATA ?? {};
+const staticSongs = normalizeSongs((staticSiteData.songs ?? []).map(fromDbSong));
+const staticMembers = uniqueNames(staticSiteData.members?.length ? staticSiteData.members : defaultMembers);
+seedStaticDataStorage();
 
 const state = {
-  songs: normalizeSongs(readJson(storageKeys.songs, [])),
-  members: readJson(storageKeys.members, defaultMembers),
+  songs: normalizeSongs(readJson(storageKeys.songs, staticSongs)),
+  members: readJson(storageKeys.members, staticMembers),
   editingId: null,
   db: null,
   isCloudReady: false,
@@ -104,10 +109,17 @@ function writeJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function seedStaticDataStorage() {
+  const version = staticSiteData.exportedAt;
+  if (!version || !staticSongs.length) return;
+  if (localStorage.getItem(storageKeys.dataVersion) === version) return;
+  writeJson(storageKeys.songs, staticSongs);
+  writeJson(storageKeys.members, staticMembers);
+  localStorage.setItem(storageKeys.dataVersion, version);
+}
+
 function createCloudClient() {
-  const config = window.SUPABASE_CONFIG;
-  if (!config || !config.url || !config.anonKey || !window.supabase) return null;
-  return window.supabase.createClient(config.url, config.anonKey);
+  return null;
 }
 
 function normalizeName(name) {
@@ -124,6 +136,8 @@ function normalizeSongs(songs) {
 }
 
 function normalizeSong(song) {
+  const createdAt = Number(song.createdAt) || new Date(song.created_at).getTime() || Date.now();
+  const updatedAt = Number(song.updatedAt) || new Date(song.updated_at).getTime() || Date.now();
   return {
     id: song.id || crypto.randomUUID(),
     title: String(song.title ?? ""),
@@ -132,8 +146,10 @@ function normalizeSong(song) {
     lyricist: normalizeName(song.lyricist),
     lyrics: String(song.lyrics ?? ""),
     performers: normalizePerformers(song.performers),
-    createdAt: Number(song.createdAt) || Date.now(),
-    updatedAt: Number(song.updatedAt) || Date.now(),
+    is_eliminated: Boolean(song.is_eliminated),
+    eliminated_at: song.eliminated_at ?? null,
+    createdAt,
+    updatedAt,
   };
 }
 
@@ -354,6 +370,7 @@ function renderMemberOptions() {
 
 function collectSongFromForm() {
   const performers = {};
+  const existingSong = state.editingId ? state.songs.find((song) => song.id === state.editingId) : null;
 
   roleFields.querySelectorAll(".role-group").forEach((group) => {
     const role = group.dataset.role;
@@ -383,9 +400,9 @@ function collectSongFromForm() {
     lyricist: getCreditValue("lyricist"),
     lyrics: document.querySelector("#lyrics").value.trim(),
     performers,
-    createdAt: state.editingId
-      ? (state.songs.find((song) => song.id === state.editingId) || {}).createdAt
-      : Date.now(),
+    is_eliminated: existingSong?.is_eliminated ?? false,
+    eliminated_at: existingSong?.eliminated_at ?? null,
+    createdAt: state.editingId ? existingSong?.createdAt : Date.now(),
     updatedAt: Date.now(),
   };
 }
@@ -411,36 +428,14 @@ function saveMembers() {
 }
 
 async function loadCloudData() {
-  state.db = createCloudClient();
-  if (!state.db) return;
-
-  const [{ data: songs, error: songError }, { data: memberRows, error: memberError }] =
-    await Promise.all([
-      state.db.from("songs").select("*").order("created_at", { ascending: false }),
-      state.db.from("members").select("names").eq("id", 1).maybeSingle(),
-    ]);
-
-  if (songError || memberError) {
-    console.warn("Cloud sync unavailable", songError || memberError);
-    return;
-  }
-
-  state.songs = normalizeSongs(songs.map(fromDbSong));
-  state.members = uniqueNames(memberRows && memberRows.names && memberRows.names.length ? memberRows.names : state.members);
-  state.isCloudReady = true;
-  writeJson(storageKeys.songs, state.songs);
-  writeJson(storageKeys.members, state.members);
+  state.isCloudReady = false;
+  applySubmissionsOpen(staticSiteData.submissionsOpen !== false);
   updateMemberUi();
   render();
-  refreshSubmissionsState();
 }
 
 async function refreshSubmissionsState() {
-  if (!state.db) return;
-  const { data, error } = await state.db.rpc("get_submissions_open");
-  if (error) return;
-  applySubmissionsOpen(data !== false);
-  subscribeToSubmissionsState();
+  applySubmissionsOpen(staticSiteData.submissionsOpen !== false);
 }
 
 function applySubmissionsOpen(isOpen) {
@@ -452,15 +447,6 @@ function applySubmissionsOpen(isOpen) {
 }
 
 function subscribeToSubmissionsState() {
-  if (state.submissionsChannel || !state.db) return;
-  state.submissionsChannel = state.db
-    .channel("submissions-state")
-    .on("broadcast", { event: "toggle" }, ({ payload }) => {
-      if (typeof payload?.is_open === "boolean") {
-        applySubmissionsOpen(payload.is_open);
-      }
-    })
-    .subscribe();
 }
 
 function fromDbSong(song) {
@@ -472,6 +458,8 @@ function fromDbSong(song) {
     lyricist: song.lyricist ?? "",
     lyrics: song.lyrics ?? "",
     performers: normalizePerformers(song.performers),
+    is_eliminated: Boolean(song.is_eliminated),
+    eliminated_at: song.eliminated_at ?? null,
     createdAt: new Date(song.created_at).getTime(),
     updatedAt: new Date(song.updated_at).getTime(),
   });
@@ -493,43 +481,15 @@ function toDbSong(song) {
 
 function reportSyncError(action, error) {
   console.warn(`Unable to ${action}`, error);
-  alert(`雲端同步失敗（${action}）：${error?.message ?? "未知錯誤"}\n資料只存在這台裝置，重整後會消失。請檢查網路或 Supabase 設定。`);
 }
 
 async function syncSong(song, isNew) {
-  if (!state.isCloudReady) return;
-  if (isNew) {
-    const { error } = await state.db.from("songs").insert(toDbSong(song));
-    if (error) reportSyncError("新增歌曲", error);
-    return;
-  }
-  const { error } = await state.db
-    .from("songs")
-    .update({
-      title: song.title,
-      arranger: song.arranger ?? "",
-      composer: song.composer ?? "",
-      lyricist: song.lyricist ?? "",
-      lyrics: song.lyrics ?? "",
-      performers: normalizePerformers(song.performers),
-      updated_at: new Date(song.updatedAt).toISOString(),
-    })
-    .eq("id", song.id);
-  if (error) reportSyncError("更新歌曲", error);
 }
 
 async function syncSongDelete(songId) {
-  if (!state.isCloudReady) return;
-  const { error } = await state.db.from("songs").delete().eq("id", songId);
-  if (error) reportSyncError("刪除歌曲", error);
 }
 
 async function syncMembers() {
-  if (!state.isCloudReady) return;
-  const { error } = await state.db
-    .from("members")
-    .upsert({ id: 1, names: state.members, updated_at: new Date().toISOString() });
-  if (error) reportSyncError("同步名單", error);
 }
 
 function getAllPerformers() {
@@ -691,7 +651,7 @@ function renderStats() {
 function render() {
   updateFilter();
   renderActiveTab();
-  exportButton.title = state.isCloudReady ? "資料已連到 Supabase" : "目前使用本機資料";
+  exportButton.title = "資料保存在前端與這台瀏覽器";
 }
 
 function renderActiveTab() {

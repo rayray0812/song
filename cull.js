@@ -1,6 +1,11 @@
 const SCHEDULE_STORAGE_KEY = "cullScheduleByEval";
 const CHAT_AUTHOR_STORAGE_KEY = "cullChatAuthor";
 const ACTIVE_TAB_STORAGE_KEY = "cullActiveTab";
+const CULL_SONGS_STORAGE_KEY = "club-song-list:songs";
+const CULL_CHAT_STORAGE_KEY = "cullChat";
+const CULL_DATA_VERSION_STORAGE_KEY = "cullDataVersion";
+const SHARED_DATA_VERSION_STORAGE_KEY = "club-song-list:data-version";
+const REPORTING_OPEN_STORAGE_KEY = "submissionsOpen";
 const DEFAULT_DURATION_MIN = 5;
 const FEE_PER_SONG = 500;
 // One-time cleanup of legacy ephemeral keys (broadcast-era).
@@ -11,10 +16,94 @@ if (!localStorage.getItem(LEGACY_CLEANUP_FLAG)) {
   localStorage.setItem(LEGACY_CLEANUP_FLAG, "1");
 }
 
+function readJson(key, fallback) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJson(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function loadStoredSongs() {
+  const fallback = (window.SITE_DATA?.songs ?? []).map(normalizeCullSong);
+  return readJson(CULL_SONGS_STORAGE_KEY, fallback).map(normalizeCullSong);
+}
+
+function saveStoredSongs() {
+  writeJson(CULL_SONGS_STORAGE_KEY, state.songs);
+}
+
+function normalizeCullSong(song) {
+  const createdAt = song.created_at ?? song.createdAt ?? new Date().toISOString();
+  const updatedAt = song.updated_at ?? song.updatedAt ?? createdAt;
+  return {
+    id: song.id,
+    title: String(song.title ?? ""),
+    arranger: song.arranger ?? "",
+    composer: song.composer ?? "",
+    lyricist: song.lyricist ?? "",
+    lyrics: song.lyrics ?? "",
+    performers: song.performers && typeof song.performers === "object" ? song.performers : {},
+    is_eliminated: Boolean(song.is_eliminated),
+    eliminated_at: song.eliminated_at ?? null,
+    created_at: createdAt,
+    updated_at: updatedAt,
+  };
+}
+
+function noteFromRow(row) {
+  return {
+    id: row.id,
+    song_id: row.song_id,
+    author: row.author ?? "",
+    content: row.content ?? "",
+    ts: Number(row.ts) || new Date(row.created_at).getTime(),
+  };
+}
+
+function groupNotes(rows = []) {
+  const grouped = {};
+  rows.map(noteFromRow).forEach((note) => {
+    if (!note.song_id) return;
+    if (!grouped[note.song_id]) grouped[note.song_id] = [];
+    grouped[note.song_id].push(note);
+  });
+  Object.values(grouped).forEach((notes) => notes.sort((a, b) => a.ts - b.ts));
+  return grouped;
+}
+
+function loadStoredChat() {
+  return readJson(CULL_CHAT_STORAGE_KEY, groupNotes(window.SITE_DATA?.cullNotes ?? []));
+}
+
+function saveStoredChat() {
+  writeJson(CULL_CHAT_STORAGE_KEY, state.chat);
+}
+
+function seedStaticCullStorage() {
+  const version = window.SITE_DATA?.exportedAt;
+  if (!version || !window.SITE_DATA?.songs?.length) return;
+  if (localStorage.getItem(SHARED_DATA_VERSION_STORAGE_KEY) !== version) {
+    writeJson(CULL_SONGS_STORAGE_KEY, window.SITE_DATA.songs.map(normalizeCullSong));
+    localStorage.setItem(SHARED_DATA_VERSION_STORAGE_KEY, version);
+  }
+  if (localStorage.getItem(CULL_DATA_VERSION_STORAGE_KEY) !== version) {
+    writeJson(CULL_CHAT_STORAGE_KEY, groupNotes(window.SITE_DATA.cullNotes ?? []));
+    writeJson(REPORTING_OPEN_STORAGE_KEY, window.SITE_DATA.submissionsOpen !== false);
+    localStorage.setItem(CULL_DATA_VERSION_STORAGE_KEY, version);
+  }
+}
+
+seedStaticCullStorage();
+
 const state = {
-  songs: [],
+  songs: loadStoredSongs(),
   db: null,
-  isUnlocked: false,
+  isUnlocked: true,
   channel: null,
   passphrase: "",
   schedule: loadStoredSchedule(),
@@ -22,7 +111,7 @@ const state = {
   scheduleSaveTimer: null,
   live: defaultLiveSession(),
   author: localStorage.getItem(CHAT_AUTHOR_STORAGE_KEY) ?? "",
-  chat: {},
+  chat: loadStoredChat(),
   notesChannel: null,
   liveTickInterval: null,
 };
@@ -95,54 +184,22 @@ cullTabButtons.forEach((button) => {
 });
 
 function createCloudClient() {
-  const config = window.SUPABASE_CONFIG;
-  if (!config?.url || !config?.anonKey || !window.supabase) return null;
-  return window.supabase.createClient(config.url, config.anonKey);
+  return null;
 }
 
 async function unlock(passphrase) {
-  state.db = createCloudClient();
-  if (!state.db) {
-    gateStatus.textContent = "尚未設定 Supabase，無法使用刷歌功能。";
-    return;
-  }
-
-  gateStatus.textContent = "檢查密語中...";
-  const { data: isValid, error } = await state.db.rpc("verify_cull_passphrase", {
-    input_passphrase: passphrase,
-  });
-
-  if (error) {
-    gateStatus.textContent = "驗證失敗，請檢查資料庫設定。";
-    return;
-  }
-
-  if (!isValid) {
-    gateStatus.textContent = "密語不正確。";
-    return;
-  }
-
   state.isUnlocked = true;
   state.passphrase = passphrase;
   gatePanel.hidden = true;
   cullPanels.forEach((panel) => panel.classList.remove("is-locked"));
   document.querySelector("#cullTabs").classList.remove("is-locked");
-  await loadCloudSchedule();
   await loadSongs();
   await loadCullNotes();
   await loadReportingState();
-  subscribeToSongs();
-  subscribeToCullNotes();
 }
 
 async function loadReportingState() {
-  if (!state.db) return;
-  const { data, error } = await state.db.rpc("get_submissions_open");
-  if (error) {
-    reportingStatusText.textContent = "讀取狀態失敗。";
-    return;
-  }
-  state.reportingOpen = data !== false;
+  state.reportingOpen = readJson(REPORTING_OPEN_STORAGE_KEY, window.SITE_DATA?.submissionsOpen !== false);
   renderReportingControl();
 }
 
@@ -159,60 +216,20 @@ async function toggleReporting() {
   const action = next ? "開放" : "關閉";
   if (!confirm(`確定要${action}報歌嗎？`)) return;
   toggleReportingButton.disabled = true;
-  const { data, error } = await state.db.rpc("set_submissions_open", {
-    input_passphrase: state.passphrase,
-    is_open: next,
-  });
-  if (error || data !== true) {
-    alert(`切換失敗${error ? `：${error.message}` : "（密語不正確或 SQL 未更新）"}`);
-    toggleReportingButton.disabled = false;
-    return;
-  }
   state.reportingOpen = next;
+  writeJson(REPORTING_OPEN_STORAGE_KEY, next);
   renderReportingControl();
-  broadcastSubmissionsState(next);
 }
 
 function broadcastSubmissionsState(isOpen) {
-  if (!state.db) return;
-  const channel = state.db.channel("submissions-state");
-  channel.subscribe((status) => {
-    if (status !== "SUBSCRIBED") return;
-    channel
-      .send({ type: "broadcast", event: "toggle", payload: { is_open: isOpen } })
-      .finally(() => state.db.removeChannel(channel));
-  });
 }
 
 async function loadSongs() {
-  syncStatus.textContent = "載入中...";
-  const { data, error } = await state.db.from("songs").select("*").order("created_at", { ascending: false });
-
-  if (error) {
-    syncStatus.textContent = "載入失敗，請檢查資料庫設定。";
-    return;
-  }
-
-  state.songs = data ?? [];
-  syncStatus.textContent = "已連線，即時同步中";
+  syncStatus.textContent = "使用前端靜態資料";
   render();
 }
 
 function subscribeToSongs() {
-  if (state.channel) return;
-
-  state.channel = state.db
-    .channel("cull-song-updates")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "songs" },
-      () => {
-        loadSongs();
-      },
-    )
-    .subscribe((status) => {
-      syncStatus.textContent = status === "SUBSCRIBED" ? "已連線，即時同步中" : "正在同步...";
-    });
 }
 
 function render() {
@@ -335,46 +352,14 @@ function persistSchedule() {
 }
 
 async function loadCloudSchedule() {
-  if (!state.db || !state.passphrase) return;
-  const localSchedule = state.schedule;
-  const { data, error } = await state.db.rpc("get_cull_schedule", {
-    input_passphrase: state.passphrase,
-  });
-  if (error || !data) {
-    state.isScheduleCloudReady = !error;
-    return;
-  }
-  const cloudSchedule = normalizeSchedule(data);
-  if (!scheduleHasData(cloudSchedule) && scheduleHasData(localSchedule)) {
-    state.schedule = localSchedule;
-    state.isScheduleCloudReady = true;
-    saveCloudSchedule();
-    return;
-  }
-  state.schedule = cloudSchedule;
-  state.isScheduleCloudReady = true;
-  localStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(state.schedule));
-  scheduleStartInput.value = state.schedule.start;
+  state.isScheduleCloudReady = false;
 }
 
 function queueCloudScheduleSave() {
-  if (!state.db || !state.passphrase) return;
-  clearTimeout(state.scheduleSaveTimer);
-  state.scheduleSaveTimer = setTimeout(saveCloudSchedule, 350);
 }
 
 async function saveCloudSchedule() {
-  if (!state.db || !state.passphrase) return;
-  const { data, error } = await state.db.rpc("set_cull_schedule", {
-    input_passphrase: state.passphrase,
-    schedule_data: state.schedule,
-  });
-  if (error || data !== true) {
-    console.warn("Unable to sync schedule", error);
-    state.isScheduleCloudReady = false;
-    return;
-  }
-  state.isScheduleCloudReady = true;
+  state.isScheduleCloudReady = false;
 }
 
 function defaultLiveSession() {
@@ -975,53 +960,12 @@ function renderChat() {
   liveChatMessages.scrollTop = liveChatMessages.scrollHeight;
 }
 
-function noteFromRow(row) {
-  return {
-    id: row.id,
-    song_id: row.song_id,
-    author: row.author ?? "",
-    content: row.content ?? "",
-    ts: new Date(row.created_at).getTime(),
-  };
-}
-
 async function loadCullNotes() {
-  if (!state.db) return;
-  const { data, error } = await state.db
-    .from("cull_notes")
-    .select("*")
-    .order("created_at", { ascending: true });
-  if (error || !data) return;
-  state.chat = {};
-  data.forEach((row) => {
-    const note = noteFromRow(row);
-    if (!state.chat[note.song_id]) state.chat[note.song_id] = [];
-    state.chat[note.song_id].push(note);
-  });
   if (state.live.active) renderChat();
   refreshNotesInCullList();
 }
 
 function subscribeToCullNotes() {
-  if (state.notesChannel || !state.db) return;
-  state.notesChannel = state.db
-    .channel("cull-notes-updates")
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "cull_notes" },
-      ({ new: row }) => {
-        if (!row?.song_id) return;
-        addChatMessage(row.song_id, noteFromRow(row));
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "DELETE", schema: "public", table: "cull_notes" },
-      ({ old }) => {
-        if (old?.id) removeChatMessageById(old.id);
-      },
-    )
-    .subscribe();
 }
 
 function removeChatMessageById(noteId) {
@@ -1036,23 +980,10 @@ function removeChatMessageById(noteId) {
 }
 
 async function deleteNote(noteId) {
-  if (!noteId || !state.db) return;
+  if (!noteId) return;
   if (!confirm("刪除這則評語？")) return;
   removeChatMessageById(noteId);
-  const { data, error } = await state.db.rpc("delete_cull_note", {
-    input_passphrase: state.passphrase,
-    note_id: noteId,
-  });
-  if (error) {
-    console.error("delete_cull_note error", error);
-    alert(`刪除失敗：${error.message}\n\n（如果寫「function ... does not exist」表示 supabase-schema.sql 需要重跑）`);
-    await loadCullNotes();
-    return;
-  }
-  if (data !== true) {
-    alert("刪除失敗：密語不正確或評語已被刪除。");
-    await loadCullNotes();
-  }
+  saveStoredChat();
 }
 
 function addChatMessage(songId, msg) {
@@ -1060,6 +991,7 @@ function addChatMessage(songId, msg) {
   if (msg.id && state.chat[songId].some((m) => m.id === msg.id)) return;
   state.chat[songId].push(msg);
   state.chat[songId].sort((a, b) => a.ts - b.ts);
+  saveStoredChat();
   if (state.live.active && getCurrentLiveSongId() === songId) {
     renderChat();
   }
@@ -1076,21 +1008,13 @@ async function sendChatMessage(content) {
   }
   const songId = getCurrentLiveSongId();
   if (!songId) return false;
-  if (!state.db) return false;
-
-  const { data, error } = await state.db.rpc("add_cull_note", {
-    input_passphrase: state.passphrase,
+  addChatMessage(songId, {
+    id: crypto.randomUUID(),
     song_id: songId,
     author: state.author.trim(),
     content: trimmed,
+    ts: Date.now(),
   });
-
-  if (error || !data) {
-    alert("傳送失敗，請稍後再試。");
-    return false;
-  }
-
-  addChatMessage(songId, noteFromRow(data));
   return true;
 }
 
@@ -1158,21 +1082,8 @@ async function toggleSong(songId, isEliminated) {
       ? { ...song, is_eliminated: isEliminated, eliminated_at: isEliminated ? new Date().toISOString() : null }
       : song,
   );
+  saveStoredSongs();
   render();
-
-  if (!state.db) return;
-
-  const { data: ok, error } = await state.db.rpc("set_song_eliminated", {
-    input_passphrase: state.passphrase,
-    song_id: songId,
-    eliminated: isEliminated,
-  });
-
-  if (error || !ok) {
-    state.songs = previousSongs;
-    render();
-    syncStatus.textContent = "更新失敗，請稍後再試。";
-  }
 }
 
 function copyPassedSongs() {
@@ -1282,3 +1193,5 @@ cullList.addEventListener("click", (event) => {
   event.preventDefault();
   deleteNote(button.dataset.noteId);
 });
+
+unlock("");

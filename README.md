@@ -5,43 +5,22 @@
 ## 技術規劃
 
 - 前端：原生 HTML / CSS / JavaScript，沒有建置步驟，適合免費部署到 GitHub Pages 或 Cloudflare Pages。
-- 後端：Supabase Free Plan，使用 Postgres 儲存歌曲與社員名單。
-- 本機預覽：未設定 Supabase 時報歌主頁 (`index.html`) 會自動改用瀏覽器 `localStorage`，可直接打開測試。刷歌頁 (`cull.html`) 必須有 Supabase 才能使用。
+- 資料：`site-data.js` 內建目前匯出的歌曲、社員名單、刷歌狀態與評語。後續在頁面上的變更會存在瀏覽器 `localStorage`。
+- 本機預覽：可直接打開 `index.html` 或 `cull.html` 測試，不需要資料庫或建置步驟。
 
 ## 上線步驟
 
-1. 到 Supabase 建立免費專案。
-2. 在 Supabase SQL Editor 貼上 `supabase-schema.sql` 並執行。
-3. 到 Project Settings > API 複製 Project URL 與 anon public key。
-4. 編輯 `supabase-config.js`，填入：
-
-```js
-window.SUPABASE_CONFIG = {
-  url: "https://YOUR_PROJECT_ID.supabase.co",
-  anonKey: "YOUR_SUPABASE_ANON_KEY",
-};
-```
-
-5. 在 Supabase SQL Editor 執行下列指令，把刷歌頁密語換成自訂值（用 bcrypt 雜湊，原始密語不會留在資料庫）：
-
-```sql
-update public.app_settings
-set value = extensions.crypt('YOUR_PASSPHRASE', extensions.gen_salt('bf', 10))
-where key = 'cull_passphrase_hash';
-```
-
-未執行這一步前 `cull.html` 會一律拒絕登入。
-
-6. 將整個資料夾部署到 GitHub Pages 或 Cloudflare Pages。
+1. 將整個資料夾部署到 GitHub Pages 或 Cloudflare Pages。
+2. 若需要更新內建資料，重新產生 `site-data.js` 後再部署。
 
 ## 檔案
 
 - `index.html`：頁面結構
 - `styles.css`：手機優先樣式
-- `app.js`：表單、統計、篩選、Supabase 同步
-- `supabase-schema.sql`：Supabase 資料表與權限
-- `supabase-config.js`：正式站的 Supabase 設定
+- `site-data.js`：從原資料庫匯出的靜態資料
+- `app.js`：表單、統計、篩選、本機保存
+- `cull.html` / `cull.js`：刷歌、排程、評語、本機保存
 
 ## 注意
 
-目前 SQL 權限設定是「知道網址的人都可以讀寫歌曲與社員資料」，適合社團內部簡單使用。刷歌頁的「刷掉 / 留下」狀態則受密語保護，需透過 `set_song_eliminated` RPC 變更。若要防止外人修改其他資料，下一步應加上登入或邀請碼。
+移除資料庫後，不同裝置之間不會自動同步。頁面會先讀 `site-data.js` 的初始資料，使用者在瀏覽器內新增、刪除、刷歌、排程或評語，只會保存在該瀏覽器的 `localStorage`。
